@@ -66,6 +66,7 @@ func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
 			}
 		}
 	}
+	log.Debug(n.WebAddress)
 	if n.WebAddress == "" {
 		return Nautobotor{}, errors.New("Could not parse config")
 	}
