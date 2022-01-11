@@ -2,6 +2,7 @@ package nautobotor
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/coredns/caddy"
@@ -50,19 +51,19 @@ func setup(c *caddy.Controller) error {
 
 func newNautobotor(c *caddy.Controller) (*Nautobotor, error) {
 	webaddress := ""
-
 	log.Debug("Starting Nautobotor")
 
 	re := New()
 
 	re.zones = make([]string, 5)
+
 	re.zones = []string{"lastmile.sk.", "if.lastmile.sk."}
 
 	for _, zone := range re.zones {
 		s := "test."
-		ip := "192.168.1.212"
-		ttl := "60"
-		rr, err := dns.NewRR(s + zone + ttl + "A" + ip)
+		ip := "192.168.1.1"
+		ttl := 60
+		rr, err := dns.NewRR(fmt.Sprintf("%s %d A %s", s+zone, ttl, ip))
 		if err != nil {
 			return re, errors.New("Could not parse Nautobotor config")
 		}
