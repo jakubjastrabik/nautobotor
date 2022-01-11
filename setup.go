@@ -2,7 +2,6 @@ package nautobotor
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/coredns/caddy"
@@ -49,45 +48,21 @@ func setup(c *caddy.Controller) error {
 	return nil
 }
 
-func recordsParse(c *caddy.Controller) (*Nautobotor, error) {
-	re := New()
-
-	re.zones = make([]string, 5)
-
-	re.zones = []string{"lastmile.sk.", "if.lastmile.sk."}
-
-	for _, zone := range re.zones {
-		s := "test."
-		ip := "192.168.1.1"
-		ttl := 60
-		rr, err := dns.NewRR(fmt.Sprintf("%s %d A %s", s+zone, ttl, ip))
-		if err != nil {
-			return nil, err
-		}
-
-		fmt.Println(rr)
-		rr.Header().Name = strings.ToLower(rr.Header().Name)
-		re.m[zone] = append(re.m[zone], rr)
-	}
-
-	fmt.Println(re.m)
-	return re, nil
-}
-
 func newNautobotor(c *caddy.Controller) (*Nautobotor, error) {
 	webaddress := ""
 
+	log.Debug("Starting Nautobotor")
+
 	re := New()
 
 	re.zones = make([]string, 5)
-
 	re.zones = []string{"lastmile.sk.", "if.lastmile.sk."}
 
 	for _, zone := range re.zones {
 		s := "test."
-		ip := "192.168.1.1"
-		ttl := 60
-		rr, err := dns.NewRR(fmt.Sprintf("%s %d A %s", s+zone, ttl, ip))
+		ip := "192.168.1.212"
+		ttl := "60"
+		rr, err := dns.NewRR(s + zone + ttl + "A" + ip)
 		if err != nil {
 			return re, errors.New("Could not parse Nautobotor config")
 		}
