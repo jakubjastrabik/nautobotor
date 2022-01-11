@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"nautobotor/nautobot"
+
 	"net/http"
+
+	"github.com/jakubjastrabik/nautobotor/nautobot"
 )
 
 // handleWebhook are used to processed nautobot webhook

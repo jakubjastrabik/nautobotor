@@ -7,31 +7,27 @@ import (
 	"github.com/coredns/coredns/plugin/metrics"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/request"
+	"github.com/jakubjastrabik/nautobotor/ramrecords"
 	"github.com/miekg/dns"
 )
+
+// Nautobotor is an nautobotor structure
+type Nautobotor struct {
+	WebAddress string
+	RM         *ramrecords.RamRecord
+	Next       plugin.Handler
+}
 
 // Define log to be a logger with the plugin name in it. This way we can just use log.Info and
 // friends to log.
 var log = clog.NewWithPlugin("nautobotor")
 
-// Nautobotor is an nautobotor structure
-type Nautobotor struct {
-	WebAddress string
-
-	zones []string            // Array of zones
-	m     map[string][]dns.RR // Map of DNS Records
-
-	Next plugin.Handler
-}
-
 // ServeDNS implements the plugin.Handler interface. This method gets called when nautobotor is used
 // in a Server.
 func (n Nautobotor) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	log.Error("Hmm Starting Nautobotor")
-
 	state := request.Request{W: w, Req: r}
 	qname := state.Name()
-	zone := plugin.Zones(n.zones).Matches(qname)
+	zone := plugin.Zones(n.RM.Zones).Matches(qname)
 
 	if zone == "" {
 		return plugin.NextOrFailure(n.Name(), n.Next, ctx, w, r)
@@ -45,7 +41,7 @@ func (n Nautobotor) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 
 	nxdomain := true
 	var soa dns.RR
-	for _, r := range n.m[zone] {
+	for _, r := range n.RM.M[zone] {
 		if r.Header().Rrtype == dns.TypeSOA && soa == nil {
 			soa = r
 		}
@@ -89,10 +85,3 @@ func (n Nautobotor) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 
 // Name implements the Handler interface.
 func (n Nautobotor) Name() string { return "nautobotor" }
-
-// New returns a pointer to a new and intialized Records.
-func New() *Nautobotor {
-	n := new(Nautobotor)
-	n.m = make(map[string][]dns.RR)
-	return n
-}

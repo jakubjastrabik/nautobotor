@@ -2,14 +2,12 @@ package nautobotor
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/metrics"
-	"github.com/miekg/dns"
+	"github.com/jakubjastrabik/nautobotor/ramrecords"
 )
 
 // init registers this plugin.
@@ -49,28 +47,8 @@ func setup(c *caddy.Controller) error {
 	return nil
 }
 
-func newNautobotor(c *caddy.Controller) (*Nautobotor, error) {
-	webaddress := ""
-	log.Debug("Starting Nautobotor")
-
-	re := New()
-
-	re.zones = make([]string, 5)
-
-	re.zones = []string{"lastmile.sk.", "if.lastmile.sk."}
-
-	for _, zone := range re.zones {
-		s := "test."
-		ip := "192.168.1.1"
-		ttl := 60
-		rr, err := dns.NewRR(fmt.Sprintf("%s %d A %s", s+zone, ttl, ip))
-		if err != nil {
-			return re, errors.New("Could not parse Nautobotor config")
-		}
-
-		rr.Header().Name = strings.ToLower(rr.Header().Name)
-		re.m[zone] = append(re.m[zone], rr)
-	}
+func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
+	var n = Nautobotor{}
 
 	for c.Next() {
 		if c.NextBlock() {
@@ -80,7 +58,7 @@ func newNautobotor(c *caddy.Controller) (*Nautobotor, error) {
 					if !c.NextArg() {
 						log.Error(c.ArgErr())
 					}
-					webaddress = c.Val()
+					n.WebAddress = c.Val()
 				}
 				if !c.Next() {
 					break
@@ -88,8 +66,15 @@ func newNautobotor(c *caddy.Controller) (*Nautobotor, error) {
 			}
 		}
 	}
+	if n.WebAddress == "" {
+		return Nautobotor{}, errors.New("Could not parse config")
+	}
 
-	re.WebAddress = webaddress
+	var err error
+	n.RM, err = ramrecords.NewRamRecords()
+	if err != nil {
+		log.Error(err)
+	}
 
-	return re, nil
+	return n, nil
 }
