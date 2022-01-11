@@ -27,7 +27,7 @@ type Nautobotor struct {
 // ServeDNS implements the plugin.Handler interface. This method gets called when nautobotor is used
 // in a Server.
 func (n Nautobotor) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	log.Debug("Hmm Starting Nautobotor")
+	log.Error("Hmm Starting Nautobotor")
 
 	state := request.Request{W: w, Req: r}
 	qname := state.Name()
