@@ -29,6 +29,7 @@ func HttpServer() {
 	http.HandleFunc("/webhook", handleWebhook)
 
 	// Start server on port specified bellow
-	port := ":8080"
-	log.Fatal(http.ListenAndServe(port, nil))
+	address := "127.0.0.1"
+	port := "8080"
+	log.Fatal(http.ListenAndServe(address+":"+port, nil))
 }
