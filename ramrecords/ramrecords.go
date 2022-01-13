@@ -1,10 +1,15 @@
 package ramrecords
 
 import (
-	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net"
+	"net/http"
 	"strings"
+	"time"
 
+	"github.com/jakubjastrabik/nautobotor/nautobot"
 	"github.com/miekg/dns"
 )
 
@@ -13,31 +18,120 @@ type RamRecord struct {
 	M     map[string][]dns.RR // Map of DNS Records
 }
 
-// New returns a pointer to a new and intialized Records.
-func New() *RamRecord {
-	n := new(RamRecord)
-	n.M = make(map[string][]dns.RR)
-	return n
+// NewRamRecords is used to initialize space for all records
+// allocated first sets of records from nautobot via api.
+// Returns a pointer to a new and intialized Records.
+func NewRamRecords() (*RamRecord, error) {
+	re := new(RamRecord)
+	re.M = make(map[string][]dns.RR)
+
+	return re, nil
 }
 
-func NewRamRecords() (*RamRecord, error) {
-	re := New()
+func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
+	re.Zones = append(re.Zones, zone)
 
-	re.Zones = make([]string, 5)
+	// TODO: auto generate this section from the nautobot api response
+	// soa, create a new SOA record
+	soa, err := dns.NewRR(fmt.Sprintf("%s. 60  IN SOA ns.%s. noc-srv.lastmile.sk. %s 7200 3600 1209600 3600", zone, zone, time.Now().Format("2006010215")))
+	if err != nil {
+		fmt.Printf("error creating soa")
+	}
+	soa.Header().Name = strings.ToLower(soa.Header().Name)
+	re.M[zone] = append(re.M[zone], soa)
 
-	re.Zones = []string{"lastmile.sk.", "if.lastmile.sk."}
+	dnsServer := map[string]string{
+		"ans-m1": "172.16.5.90",
+		"arn-t1": "172.16.5.76",
+		"arn-x1": "172.16.5.77",
+	}
 
-	for _, zone := range re.Zones {
-		s := "test."
-		ip := "192.168.1.1"
-		ttl := 60
-		rr, err := dns.NewRR(fmt.Sprintf("%s %d A %s", s+zone, ttl, ip))
+	// TODO: auto generate this section from the nautobot api response
+	// NS, create a new NS record
+	for k := range dnsServer {
+		a, err := dns.NewRR(fmt.Sprintf("%s. 60  NS %s.%s", zone, k, zone))
 		if err != nil {
-			return re, errors.New("Could not parse Nautobotor config")
+			fmt.Printf("error creating a")
 		}
+		re.M[zone] = append(re.M[zone], a)
+	}
 
-		rr.Header().Name = strings.ToLower(rr.Header().Name)
-		re.M[zone] = append(re.M[zone], rr)
+	// TODO: auto generate this section from the nautobot api response
+	// a, create a new A record
+	for k, v := range dnsServer {
+		a, err := dns.NewRR(fmt.Sprintf("%s.%s 60  A %s", k, zone, v))
+		if err != nil {
+			fmt.Printf("error creating a")
+		}
+		re.M[zone] = append(re.M[zone], a)
+	}
+
+	return re, nil
+}
+
+func (re *RamRecord) AddRecord(ipFamily int8, ip string, dnsName string, zone string) (*RamRecord, error) {
+	// Cut of CIDRMask
+	ipvAddr, _, err := net.ParseCIDR(ip)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	switch ipFamily {
+	case 4:
+		a, err := dns.NewRR(fmt.Sprintf("%s. 60  A %s", dnsName, ipvAddr))
+		if err != nil {
+			fmt.Printf("error creating a")
+		}
+		re.M[zone] = append(re.M[zone], a)
+	case 6:
+		aaaa, err := dns.NewRR(fmt.Sprintf("%s. 60  AAAA %s", dnsName, ipvAddr))
+		if err != nil {
+			fmt.Printf("error creating a")
+		}
+		re.M[zone] = append(re.M[zone], aaaa)
+	}
+
+	return re, nil
+}
+
+// handleData are used to handle incoming data structures
+// returning pointers to nautobot DNS records structures
+func (re *RamRecord) handleData(ip *nautobot.IPaddress) (*RamRecord, error) {
+	var err error
+
+	// TODO: Handle error
+	re, err = re.AddZone("if.lastmile.sk")
+	if err != nil {
+		log.Printf("error adding zone: err=%s\n", err)
+	}
+	re, err = re.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, "if.lastmile.sk")
+	if err != nil {
+		log.Printf("error adding record to zone %s: err=%s\n", "if.lastmile.sk", err)
 	}
 	return re, nil
+}
+
+// handleWebhook are used to processed nautobot webhook
+func (re *RamRecord) handleWebhook(w http.ResponseWriter, r *http.Request) {
+	payload, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("error reading request body: err=%s\n", err)
+		return
+	}
+	defer r.Body.Close()
+
+	// Unmarshal data to strcut
+	_, err = re.handleData(nautobot.NewIPaddress(payload))
+	if err != nil {
+		log.Printf("error handling DNS data: err=%s\n", err)
+	}
+}
+
+// httpServer handle web server with routing
+func (re *RamRecord) HttpServer(webaddress string) {
+	// API routes
+	http.HandleFunc("/webhook", re.handleWebhook)
+
+	// Start server on port specified bellow
+	log.Fatal(http.ListenAndServe(webaddress, nil))
 }
