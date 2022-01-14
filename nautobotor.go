@@ -2,10 +2,13 @@ package nautobotor
 
 import (
 	"context"
+	"net"
+	"net/http"
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/metrics"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
+	"github.com/coredns/coredns/plugin/pkg/reuseport"
 	"github.com/coredns/coredns/request"
 	"github.com/jakubjastrabik/nautobotor/ramrecords"
 	"github.com/miekg/dns"
@@ -15,7 +18,11 @@ import (
 type Nautobotor struct {
 	WebAddress string
 	RM         *ramrecords.RamRecord
-	Next       plugin.Handler
+
+	ln  net.Listener
+	mux *http.ServeMux
+
+	Next plugin.Handler
 }
 
 // Define log to be a logger with the plugin name in it. This way we can just use log.Info and
@@ -81,6 +88,29 @@ func (n Nautobotor) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 	}
 	return dns.RcodeSuccess, nil
 
+}
+
+func (n *Nautobotor) onStartup() error {
+	ln, err := reuseport.Listen("tcp", n.WebAddress)
+	if err != nil {
+		return err
+	}
+
+	n.ln = ln
+	n.mux = http.NewServeMux()
+
+	n.mux.HandleFunc("/webhook", func(w http.ResponseWriter, _ *http.Request) {
+		log.Infof("Catch webhook")
+	})
+
+	go func() {
+		err := http.Serve(n.ln, n.mux)
+		if err != nil {
+			log.Errorf("errro initializing web server: err=%s\n", err)
+		}
+	}()
+
+	return nil
 }
 
 // Name implements the Handler interface.

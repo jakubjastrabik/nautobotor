@@ -25,6 +25,14 @@ func setup(c *caddy.Controller) error {
 		return plugin.Error("Nautobotor", err)
 	}
 
+	c.OnStartup(func() error {
+		err := nautobotorPlugin.onStartup()
+		if err != nil {
+			log.Errorf("Unable startup web server: err=%s\n", err)
+		}
+		return nil
+	})
+
 	// Add a startup function that will -- after all plugins have been loaded -- check if the
 	// prometheus plugin has been used - if so we will export metrics. We can only register
 	// this metric once, hence the "once.Do".
@@ -81,8 +89,6 @@ func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
 	if err != nil {
 		log.Errorf("errro initializing module structure: err=%s\n", err)
 	}
-
-	n.RM.HttpServer(n.WebAddress)
 
 	log.Infof("Started plugin version %s", Version)
 	return n, nil
