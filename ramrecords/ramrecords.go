@@ -94,5 +94,7 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip string, dnsName string, zone st
 		re.M[zone] = append(re.M[zone], aaaa)
 	}
 
+	log.Debug(re.M[zone])
+
 	return re, nil
 }
