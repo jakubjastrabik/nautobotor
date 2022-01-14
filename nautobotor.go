@@ -11,11 +11,6 @@ import (
 	"github.com/miekg/dns"
 )
 
-var (
-	// N export global pointer to struct
-	N *Nautobotor
-)
-
 // Nautobotor is an nautobotor structure
 type Nautobotor struct {
 	WebAddress string
