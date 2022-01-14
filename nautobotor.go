@@ -2,6 +2,7 @@ package nautobotor
 
 import (
 	"context"
+	"io/ioutil"
 	"net"
 	"net/http"
 
@@ -10,6 +11,7 @@ import (
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/plugin/pkg/reuseport"
 	"github.com/coredns/coredns/request"
+	"github.com/jakubjastrabik/nautobotor/nautobot"
 	"github.com/jakubjastrabik/nautobotor/ramrecords"
 	"github.com/miekg/dns"
 )
@@ -99,8 +101,24 @@ func (n *Nautobotor) onStartup() error {
 	n.ln = ln
 	n.mux = http.NewServeMux()
 
-	n.mux.HandleFunc("/webhook", func(w http.ResponseWriter, _ *http.Request) {
-		log.Infof("Catch webhook")
+	n.mux.HandleFunc("/webhook", func(w http.ResponseWriter, r *http.Request) {
+		log.Debug("Start handling webhook data")
+
+		// handleWebhook are used to processed nautobot webhook
+		payload, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Errorf("error reading request body: err=%s\n", err)
+			return
+		}
+		defer r.Body.Close()
+
+		// Unmarshal data to strcut
+		_, err = n.handleData(nautobot.NewIPaddress(payload))
+		if err != nil {
+			log.Errorf("error handling DNS data: err=%s\n", err)
+
+		}
+
 	})
 
 	go func() {
@@ -111,6 +129,25 @@ func (n *Nautobotor) onStartup() error {
 	}()
 
 	return nil
+}
+
+// handleData are used to handle incoming data structures
+// returning pointers to nautobot DNS records structures
+func (n *Nautobotor) handleData(ip *nautobot.IPaddress) (*Nautobotor, error) {
+	log.Debug("Start handling DNS record")
+	var err error
+
+	// TODO: Handle error
+	// parse zone name from host dnsName record
+	n.RM, err = n.RM.AddZone("if.lastmile.sk")
+	if err != nil {
+		log.Errorf("error adding zone: err=%s\n", err)
+	}
+	n.RM, err = n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, "if.lastmile.sk")
+	if err != nil {
+		log.Errorf("error adding record to zone %s: err=%s\n", "if.lastmile.sk", err)
+	}
+	return n, nil
 }
 
 // Name implements the Handler interface.

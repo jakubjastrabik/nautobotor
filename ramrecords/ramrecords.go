@@ -2,15 +2,12 @@ package ramrecords
 
 import (
 	"fmt"
-	"io/ioutil"
 
 	"net"
-	"net/http"
 	"strings"
 	"time"
 
 	clog "github.com/coredns/coredns/plugin/pkg/log"
-	"github.com/jakubjastrabik/nautobotor/nautobot"
 	"github.com/miekg/dns"
 )
 
@@ -98,50 +95,4 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip string, dnsName string, zone st
 	}
 
 	return re, nil
-}
-
-// handleData are used to handle incoming data structures
-// returning pointers to nautobot DNS records structures
-func (re *RamRecord) handleData(ip *nautobot.IPaddress) (*RamRecord, error) {
-	log.Debug("Start handling DNS record")
-	var err error
-
-	// TODO: Handle error
-	re, err = re.AddZone("if.lastmile.sk")
-	if err != nil {
-		log.Errorf("error adding zone: err=%s\n", err)
-	}
-	re, err = re.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, "if.lastmile.sk")
-	if err != nil {
-		log.Errorf("error adding record to zone %s: err=%s\n", "if.lastmile.sk", err)
-	}
-	return re, nil
-}
-
-// handleWebhook are used to processed nautobot webhook
-func (re *RamRecord) handleWebhook(w http.ResponseWriter, r *http.Request) {
-	log.Debug("Start handling webhook data")
-
-	payload, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Errorf("error reading request body: err=%s\n", err)
-		return
-	}
-	defer r.Body.Close()
-
-	// Unmarshal data to strcut
-	_, err = re.handleData(nautobot.NewIPaddress(payload))
-	if err != nil {
-		log.Errorf("error handling DNS data: err=%s\n", err)
-	}
-}
-
-// httpServer handle web server with routing
-func (re *RamRecord) HttpServer(webaddress string) {
-	log.Debug("Starting web server")
-	// API routes
-	http.HandleFunc("/webhook", re.handleWebhook)
-
-	// Start server on port specified bellow
-	log.Fatal(http.ListenAndServe(webaddress, nil))
 }
