@@ -10,6 +10,8 @@ import (
 	"github.com/jakubjastrabik/nautobotor/ramrecords"
 )
 
+var Version = "v0.2.2"
+
 // init registers this plugin.
 func init() { plugin.Register("nautobotor", setup) }
 
@@ -82,5 +84,6 @@ func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
 
 	n.RM.HttpServer(n.WebAddress)
 
+	log.Infof("Started plugin version %s", Version)
 	return n, nil
 }
