@@ -16,6 +16,7 @@ func init() { plugin.Register("nautobotor", setup) }
 // setup is the function that gets called when the config parser see the token "nautobotor". Setup is responsible
 // for parsing any extra options the nautobotor plugin may have. The first token this function sees is "nautobotor".
 func setup(c *caddy.Controller) error {
+	log.Debug("Start inicializing module configure values")
 
 	nautobotorPlugin, err := newNautobotor(c)
 	if err != nil {
@@ -50,13 +51,15 @@ func setup(c *caddy.Controller) error {
 func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
 	var n = Nautobotor{}
 
+	log.Debug("Starting parsing configuration values")
+
 	for c.Next() {
 		if c.NextBlock() {
 			for {
 				switch c.Val() {
 				case "webaddress":
 					if !c.NextArg() {
-						log.Error(c.ArgErr())
+						log.Errorf("unable parsing configuration values: err=%s\n", c.ArgErr())
 					}
 					n.WebAddress = c.Val()
 				}
@@ -68,15 +71,16 @@ func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
 	}
 
 	if n.WebAddress == "" {
-		return Nautobotor{}, errors.New("Could not parse config")
+		return Nautobotor{}, errors.New("Could not parse webaddress from congiguration values")
 	}
 
 	var err error
 	n.RM, err = ramrecords.NewRamRecords()
 	if err != nil {
-		log.Error(err)
+		log.Errorf("errro initializing module structure: err=%s\n", err)
 	}
-	go n.RM.HttpServer(n.WebAddress)
+
+	n.RM.HttpServer(n.WebAddress)
 
 	return n, nil
 }

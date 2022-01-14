@@ -2,7 +2,8 @@ package nautobot
 
 import (
 	"encoding/json"
-	"log"
+
+	clog "github.com/coredns/coredns/plugin/pkg/log"
 )
 
 // IPaddress is structure for pars webhook intput data
@@ -23,10 +24,13 @@ type IPaddress struct {
 // NewIPaddress Unmarshal input byte to json struct
 func NewIPaddress(payload []byte) *IPaddress {
 	var ip_add IPaddress
+	var log = clog.NewWithPlugin("nautobotor")
+
+	log.Debug("Starting unmarshal IPAddress")
 
 	err := json.Unmarshal(payload, &ip_add)
 	if err != nil {
-		log.Println(err)
+		log.Errorf("errro unmarshal IPAddress: err=%s\n", err)
 	}
 
 	return &ip_add

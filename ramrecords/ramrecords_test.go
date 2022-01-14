@@ -35,5 +35,4 @@ func TestRamRecords(t *testing.T) {
 	}
 	ss, _ := re.AddRecord(4, "192.168.1.251/24", "test.if.lastmile.sk", "if.lastmile.sk")
 	t.Log(ss)
-
 }
