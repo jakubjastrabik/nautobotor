@@ -138,13 +138,15 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) (*Nautobotor, error) {
 
 	log.Debug("Unmarshaled data from webhook to be add to DNS: data=", ip)
 
+	// Debug na vstupne data je OK. Problem teda bude zjavne nizssie
+
 	// TODO: Handle error
 	// parse zone name from host dnsName record
-	n.RM, err = n.RM.AddZone("if.lastmile.sk")
+	_, err = n.RM.AddZone("if.lastmile.sk")
 	if err != nil {
 		log.Errorf("error adding zone: err=%s\n", err)
 	}
-	n.RM, err = n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, "if.lastmile.sk")
+	_, err = n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, "if.lastmile.sk")
 	if err != nil {
 		log.Errorf("error adding record to zone %s: err=%s\n", "if.lastmile.sk", err)
 	}
