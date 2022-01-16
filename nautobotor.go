@@ -116,7 +116,6 @@ func (n *Nautobotor) onStartup() error {
 		_, err = n.handleData(nautobot.NewIPaddress(payload))
 		if err != nil {
 			log.Errorf("error handling DNS data: err=%s\n", err)
-
 		}
 
 	})
@@ -136,6 +135,8 @@ func (n *Nautobotor) onStartup() error {
 func (n *Nautobotor) handleData(ip *nautobot.IPaddress) (*Nautobotor, error) {
 	log.Debug("Start handling DNS record")
 	var err error
+
+	log.Debug("Unmarshaled data from webhook to be add to DNS: data=", ip)
 
 	// TODO: Handle error
 	// parse zone name from host dnsName record

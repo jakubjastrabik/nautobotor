@@ -35,6 +35,7 @@ func TestNewIPaddress(t *testing.T) {
 	// Compare testing structure
 	if reflect.DeepEqual(ip_add, exp) {
 		// Test Pass!
+		t.Log("Unmarshal IPaddress struct. Get: ", exp)
 	} else {
 		// Test Fail!
 		t.Fatal("Unable unmarshal IPAddress struct. Get: ", exp)
