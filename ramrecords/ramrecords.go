@@ -1,8 +1,6 @@
 package ramrecords
 
 import (
-	"fmt"
-
 	"net"
 	"strings"
 	"time"
@@ -30,13 +28,12 @@ func NewRamRecords() (*RamRecord, error) {
 }
 
 func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
-	log.Debug("Before Zone procesing procesing", re.M[zone])
 	log.Debug("Start adding zone to ramrecords")
 	re.Zones = append(re.Zones, zone)
 
 	// TODO: auto generate this section from the nautobot api response
 	// soa, create a new SOA record
-	soa, err := dns.NewRR(fmt.Sprintf("%s. 60  IN SOA ns.%s. noc-srv.lastmile.sk. %s 7200 3600 1209600 3600", zone, zone, time.Now().Format("2006010215")))
+	soa, err := dns.NewRR(zone + ". 60  IN SOA ns." + zone + ". noc-srv.lastmile.sk." + time.Now().Format("2006010215") + "7200 3600 1209600 3600")
 	if err != nil {
 		log.Errorf("error creating SOA record: err=%s\n", err)
 	}
@@ -52,7 +49,7 @@ func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
 	// TODO: auto generate this section from the nautobot api response
 	// NS, create a new NS record
 	for k := range dnsServer {
-		ns, err := dns.NewRR(fmt.Sprintf("%s. 60  NS %s.%s", zone, k, zone))
+		ns, err := dns.NewRR(zone + ". 60  NS" + k + "." + zone)
 		if err != nil {
 			log.Errorf("error creating NS record: err=%s\n", err)
 		}
@@ -62,18 +59,18 @@ func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
 	// TODO: auto generate this section from the nautobot api response
 	// a, create a new A record
 	for k, v := range dnsServer {
-		a, err := dns.NewRR(fmt.Sprintf("%s.%s 60  A %s", k, zone, v))
+		a, err := dns.NewRR(k + "." + zone + "60  A" + v)
 		if err != nil {
 			log.Errorf("error creating A record: err=%s\n", err)
 		}
 		re.M[zone] = append(re.M[zone], a)
 	}
-	log.Debug("After zone procesing procesing", re.M[zone])
+
 	return re, nil
 }
 
 func (re *RamRecord) AddRecord(ipFamily int8, ip string, dnsName string, zone string) (*RamRecord, error) {
-	log.Debug("Before Record procesing procesing", re.M[zone])
+
 	log.Debug("Start adding record to ramrecords")
 	// Cut of CIDRMask
 	ipvAddr, _, err := net.ParseCIDR(ip)
@@ -83,13 +80,13 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip string, dnsName string, zone st
 
 	switch ipFamily {
 	case 4:
-		a, err := dns.NewRR(fmt.Sprintf("%s. 60  A %s", dnsName, ipvAddr))
+		a, err := dns.NewRR(dnsName + ". 60  A" + string(ipvAddr))
 		if err != nil {
 			log.Errorf("error adding A record: err=%s\n", err)
 		}
 		re.M[zone] = append(re.M[zone], a)
 	case 6:
-		aaaa, err := dns.NewRR(fmt.Sprintf("%s. 60  AAAA %s", dnsName, ipvAddr))
+		aaaa, err := dns.NewRR(dnsName + ". 60  AAAA" + string(ipvAddr))
 		if err != nil {
 			log.Errorf("error adding AAAA record: err=%s\n", err)
 		}
