@@ -30,6 +30,7 @@ func NewRamRecords() (*RamRecord, error) {
 }
 
 func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
+	log.Debug("Before Zone procesing procesing", re.M[zone])
 	log.Debug("Start adding zone to ramrecords")
 	re.Zones = append(re.Zones, zone)
 
@@ -67,11 +68,12 @@ func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
 		}
 		re.M[zone] = append(re.M[zone], a)
 	}
-
+	log.Debug("After zone procesing procesing", re.M[zone])
 	return re, nil
 }
 
 func (re *RamRecord) AddRecord(ipFamily int8, ip string, dnsName string, zone string) (*RamRecord, error) {
+	log.Debug("Before Record procesing procesing", re.M[zone])
 	log.Debug("Start adding record to ramrecords")
 	// Cut of CIDRMask
 	ipvAddr, _, err := net.ParseCIDR(ip)
@@ -94,7 +96,7 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip string, dnsName string, zone st
 		re.M[zone] = append(re.M[zone], aaaa)
 	}
 
-	log.Debug(re.M[zone])
+	log.Debug("After Record procesing procesing", re.M[zone])
 
 	return re, nil
 }

@@ -113,7 +113,7 @@ func (n *Nautobotor) onStartup() error {
 		defer r.Body.Close()
 
 		// Unmarshal data to strcut
-		_, err = n.handleData(nautobot.NewIPaddress(payload))
+		err = n.handleData(nautobot.NewIPaddress(payload))
 		if err != nil {
 			log.Errorf("error handling DNS data: err=%s\n", err)
 		}
@@ -132,7 +132,7 @@ func (n *Nautobotor) onStartup() error {
 
 // handleData are used to handle incoming data structures
 // returning pointers to nautobot DNS records structures
-func (n *Nautobotor) handleData(ip *nautobot.IPaddress) (*Nautobotor, error) {
+func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 	log.Debug("Start handling DNS record")
 	var err error
 
@@ -150,7 +150,7 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) (*Nautobotor, error) {
 	if err != nil {
 		log.Errorf("error adding record to zone %s: err=%s\n", "if.lastmile.sk", err)
 	}
-	return n, nil
+	return nil
 }
 
 // Name implements the Handler interface.
