@@ -10,7 +10,11 @@ import (
 	"github.com/jakubjastrabik/nautobotor/ramrecords"
 )
 
-var Version = "v0.2.10"
+var Version = "v0.3.0"
+
+const (
+	defaultWebAddress = ":9002"
+)
 
 // init registers this plugin.
 func init() { plugin.Register("nautobotor", setup) }
@@ -18,12 +22,14 @@ func init() { plugin.Register("nautobotor", setup) }
 // setup is the function that gets called when the config parser see the token "nautobotor". Setup is responsible
 // for parsing any extra options the nautobotor plugin may have. The first token this function sees is "nautobotor".
 func setup(c *caddy.Controller) error {
-	log.Debug("Start inicializing module configure values")
+	log.Debug(" Start inicializing module configure values")
 
-	nautobotorPlugin, err := newNautobotor(c)
+	nautobotorPlugin, err := parseNawtobotor(c)
 	if err != nil {
 		return plugin.Error("Nautobotor", err)
 	}
+
+	log.Infof("Started plugin version %s", Version)
 
 	c.OnStartup(func() error {
 		nautobotorPlugin.RM, err = ramrecords.NewRamRecords()
@@ -68,32 +74,32 @@ func setup(c *caddy.Controller) error {
 	return nil
 }
 
-func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
-	var n = Nautobotor{}
+func newNautobotor() *Nautobotor {
+	return &Nautobotor{
+		WebAddress: defaultWebAddress,
+	}
+}
 
-	log.Debug("Starting parsing configuration values")
+func parseNawtobotor(c *caddy.Controller) (*Nautobotor, error) {
+	n := newNautobotor()
 
 	for c.Next() {
-		if c.NextBlock() {
-			for {
-				switch c.Val() {
-				case "webaddress":
-					if !c.NextArg() {
-						log.Errorf("unable parsing configuration values: err=%s\n", c.ArgErr())
-					}
-					n.WebAddress = c.Val()
+		for c.NextBlock() {
+			switch c.Val() {
+			case "webaddress":
+				if !c.NextArg() {
+					log.Errorf("unable parsing configuration values: err=%s\n", c.ArgErr())
 				}
-				if !c.Next() {
-					break
-				}
+				n.WebAddress = c.Val()
+			default:
+				return nil, c.Errf("unknown property '%s'", c.Val())
 			}
 		}
 	}
 
 	if n.WebAddress == "" {
-		return Nautobotor{}, errors.New("Could not parse webaddress from congiguration values")
+		return nil, errors.New("Could not parse webaddress from congiguration values")
 	}
 
-	log.Infof("Started plugin version %s", Version)
 	return n, nil
 }

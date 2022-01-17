@@ -80,13 +80,13 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip string, dnsName string, zone st
 
 	switch ipFamily {
 	case 4:
-		a, err := dns.NewRR(dnsName + " 60  A " + string(ipvAddr))
+		a, err := dns.NewRR(dnsName + " 60  A " + ipvAddr.String())
 		if err != nil {
 			log.Errorf("error adding A record: err=%s\n", err)
 		}
 		re.M[zone] = append(re.M[zone], a)
 	case 6:
-		aaaa, err := dns.NewRR(dnsName + " 60  AAAA " + string(ipvAddr))
+		aaaa, err := dns.NewRR(dnsName + " 60  AAAA " + ipvAddr.String())
 		if err != nil {
 			log.Errorf("error adding AAAA record: err=%s\n", err)
 		}
