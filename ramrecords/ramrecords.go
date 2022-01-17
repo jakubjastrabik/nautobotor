@@ -33,6 +33,7 @@ func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
 
 	// TODO: auto generate this section from the nautobot api response
 	// soa, create a new SOA record
+
 	soa, err := dns.NewRR(zone + " 60  IN SOA ns." + zone + " noc-srv.lastmile.sk. " + time.Now().Format("2006010215") + " 7200 3600 1209600 3600")
 	if err != nil {
 		log.Errorf("error creating SOA record: err=%s\n", err)

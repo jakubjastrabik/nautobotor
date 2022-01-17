@@ -66,8 +66,6 @@ func TestNautobotor_handleData(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			t.Log(tt.want.RM)
-
 			n, err := parseNawtobotor(tt.args.c)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseNawtobotor() error = %v, wantErr %v", err, tt.wantErr)
@@ -82,7 +80,6 @@ func TestNautobotor_handleData(t *testing.T) {
 			if err := n.handleData(tt.ip); (err != nil) != tt.wantErr {
 				t.Errorf("Nautobotor.handleData() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			t.Log("Gen DNS", n.RM)
 
 			// if !reflect.DeepEqual(n, tt.want) {
 			// 	t.Errorf("parseNawtobotor() = %v, want %v", n, tt.want)

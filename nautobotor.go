@@ -34,6 +34,9 @@ var log = clog.NewWithPlugin("nautobotor")
 // ServeDNS implements the plugin.Handler interface. This method gets called when nautobotor is used
 // in a Server.
 func (n Nautobotor) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+	log.Info("ServerDNS() Zones:", n.RM.Zones)
+	log.Info("ServerDNS() Records:", n.RM.M)
+
 	state := request.Request{W: w, Req: r}
 	qname := state.Name()
 	zone := plugin.Zones(n.RM.Zones).Matches(qname)
@@ -150,6 +153,8 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 	if err != nil {
 		log.Errorf("error adding record to zone %s: err=%s\n", "if.lastmile.sk", err)
 	}
+	log.Info("handleData() Zones:", n.RM.Zones)
+	log.Info("handleData() Records:", n.RM.M)
 	return nil
 }
 
