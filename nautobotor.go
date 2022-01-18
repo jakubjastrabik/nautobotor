@@ -40,7 +40,7 @@ func (n Nautobotor) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 	state := request.Request{W: w, Req: r}
 	qname := state.Name()
 	zone := plugin.Zones(n.RM.Zones).Matches(qname)
-
+	log.Debug("Zone: ", zone)
 	if zone == "" {
 		return plugin.NextOrFailure(n.Name(), n.Next, ctx, w, r)
 	}

@@ -27,23 +27,23 @@ func NewRamRecords() (*RamRecord, error) {
 	return re, nil
 }
 
+func (re *RamRecord) newRecord(zone, s string) {
+	rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
+	if err != nil {
+		log.Errorf("error creating new record: err=%s\n", err)
+	}
+	rr.Header().Name = strings.ToLower(rr.Header().Name)
+	re.M[zone] = append(re.M[zone], rr)
+	log.Debugf("Create newRecord: zone=%s, record=%s", zone, rr)
+}
+
 func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
 	log.Debug("Start adding zone to ramrecords")
 	re.Zones = append(re.Zones, zone)
 
 	// TODO: auto generate this section from the nautobot api response
 	// soa, create a new SOA record
-
-	soa, err := dns.NewRR(zone + " 60  IN SOA ns." + zone + " noc-srv.lastmile.sk. " + time.Now().Format("2006010215") + " 7200 3600 1209600 3600")
-	log.Debug("SOA RAW: ", zone+" 60  IN SOA ns."+zone+" noc-srv.lastmile.sk. "+time.Now().Format("2006010215")+" 7200 3600 1209600 3600")
-	log.Debug("SOA Header: ", soa.Header())
-	log.Debug("SOA String: ", soa.String())
-	if err != nil {
-		log.Errorf("error creating SOA record: err=%s\n", err)
-	}
-	soa.Header().Name = strings.ToLower(soa.Header().Name)
-	re.M[zone] = append(re.M[zone], soa)
-	log.Debug("SOA APP: ", soa)
+	re.newRecord(zone, "@   60  IN SOA ns.if.lastmile.sk. noc-srv.lastmile.sk. "+time.Now().Format("2006010215")+" 7200 3600 1209600 3600")
 
 	dnsServer := map[string]string{
 		"ans-m1": "172.16.5.90",
@@ -53,38 +53,17 @@ func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
 
 	// TODO: auto generate this section from the nautobot api response
 	// NS, create a new NS record
-	for k := range dnsServer {
-		ns, err := dns.NewRR(zone + " 60  NS " + k + "." + zone)
-		log.Debug("NS RAW: ", zone+" 60  NS "+k+"."+zone)
-		log.Debug("NS RR: ", ns)
-		if err != nil {
-			log.Errorf("error creating NS record: err=%s\n", err)
-		}
-		ns.Header().Name = strings.ToLower(ns.Header().Name)
-		re.M[zone] = append(re.M[zone], ns)
-		log.Debug("NS APP: ", ns)
-	}
-
-	// TODO: auto generate this section from the nautobot api response
-	// a, create a new A record
 	for k, v := range dnsServer {
-		a, err := dns.NewRR(k + "." + zone + " 60  A " + v)
-		log.Debug("A RAW: ", k+"."+zone+" 60  A "+v)
-		log.Debug("A RR: ", a)
-		if err != nil {
-			log.Errorf("error creating A record: err=%s\n", err)
-		}
-		a.Header().Name = strings.ToLower(a.Header().Name)
-		re.M[zone] = append(re.M[zone], a)
-		log.Debug("A APP: ", a)
+		re.newRecord(zone, "@ 60 IN	NS "+k)
+		re.newRecord(zone, k+" 60 IN A "+v)
 	}
 
 	return re, nil
 }
 
 func (re *RamRecord) AddRecord(ipFamily int8, ip string, dnsName string, zone string) (*RamRecord, error) {
-
 	log.Debug("Start adding record to ramrecords")
+
 	// Cut of CIDRMask
 	ipvAddr, _, err := net.ParseCIDR(ip)
 	if err != nil {
@@ -93,25 +72,9 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip string, dnsName string, zone st
 
 	switch ipFamily {
 	case 4:
-		a, err := dns.NewRR(dnsName + " 60  A " + ipvAddr.String())
-		log.Debug("A RAW: ", dnsName+" 60  A "+ipvAddr.String())
-		log.Debug("A RR: ", a)
-		if err != nil {
-			log.Errorf("error adding A record: err=%s\n", err)
-		}
-		a.Header().Name = strings.ToLower(a.Header().Name)
-		re.M[zone] = append(re.M[zone], a)
-		log.Debug("A APP: ", a)
+		re.newRecord(zone, dnsName+" 60 IN A "+ipvAddr.String())
 	case 6:
-		aaaa, err := dns.NewRR(dnsName + " 60  AAAA " + ipvAddr.String())
-		log.Debug("AAAA RAW: ", dnsName+" 60  AAAA "+ipvAddr.String())
-		log.Debug("AAAA RR: ", aaaa)
-		if err != nil {
-			log.Errorf("error adding AAAA record: err=%s\n", err)
-		}
-		aaaa.Header().Name = strings.ToLower(aaaa.Header().Name)
-		re.M[zone] = append(re.M[zone], aaaa)
-		log.Debug("AAAA APP: ", aaaa)
+		re.newRecord(zone, dnsName+" 60 IN AAAA "+ipvAddr.String())
 	}
 
 	log.Debug("After Record procesing procesing", re.M[zone])
