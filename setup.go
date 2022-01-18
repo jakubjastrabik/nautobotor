@@ -10,7 +10,7 @@ import (
 	"github.com/jakubjastrabik/nautobotor/ramrecords"
 )
 
-var Version = "v0.3.2"
+var Version = "v0.3.3"
 
 const (
 	defaultWebAddress = ":9002"
