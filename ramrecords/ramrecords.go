@@ -43,7 +43,7 @@ func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
 
 	// TODO: auto generate this section from the nautobot api response
 	// soa, create a new SOA record
-	re.newRecord(zone, "@   60  IN SOA ns.if.lastmile.sk. noc-srv.lastmile.sk. "+time.Now().Format("2006010215")+" 7200 3600 1209600 3600")
+	re.newRecord(zone, "@ SOA ns.if.lastmile.sk. noc-srv.lastmile.sk. "+time.Now().Format("2006010215")+" 7200 3600 1209600 3600")
 
 	dnsServer := map[string]string{
 		"ans-m1": "172.16.5.90",
@@ -54,8 +54,8 @@ func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
 	// TODO: auto generate this section from the nautobot api response
 	// NS, create a new NS record
 	for k, v := range dnsServer {
-		re.newRecord(zone, "@ 60 IN	NS "+k)
-		re.newRecord(zone, k+" 60 IN A "+v)
+		re.newRecord(zone, "@ NS "+k)
+		re.newRecord(zone, k+" A "+v)
 	}
 
 	return re, nil
@@ -72,9 +72,9 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip string, dnsName string, zone st
 
 	switch ipFamily {
 	case 4:
-		re.newRecord(zone, dnsName+" 60 IN A "+ipvAddr.String())
+		re.newRecord(zone, dnsName+" A "+ipvAddr.String())
 	case 6:
-		re.newRecord(zone, dnsName+" 60 IN AAAA "+ipvAddr.String())
+		re.newRecord(zone, dnsName+" AAAA "+ipvAddr.String())
 	}
 
 	log.Debug("After Record procesing procesing", re.M[zone])
