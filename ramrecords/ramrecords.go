@@ -36,7 +36,8 @@ func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
 
 	soa, err := dns.NewRR(zone + " 60  IN SOA ns." + zone + " noc-srv.lastmile.sk. " + time.Now().Format("2006010215") + " 7200 3600 1209600 3600")
 	log.Debug("SOA RAW: ", zone+" 60  IN SOA ns."+zone+" noc-srv.lastmile.sk. "+time.Now().Format("2006010215")+" 7200 3600 1209600 3600")
-	log.Debug("SOA RR: ", soa)
+	log.Debug("SOA Header: ", soa.Header())
+	log.Debug("SOA String: ", soa.String())
 	if err != nil {
 		log.Errorf("error creating SOA record: err=%s\n", err)
 	}
