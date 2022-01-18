@@ -1,6 +1,7 @@
 package nautobotor
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -81,9 +82,9 @@ func TestNautobotor_handleData(t *testing.T) {
 				t.Errorf("Nautobotor.handleData() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			// if !reflect.DeepEqual(n, tt.want) {
-			// 	t.Errorf("parseNawtobotor() = %v, want %v", n, tt.want)
-			// }
+			if !reflect.DeepEqual(n, tt.want) {
+				t.Errorf("parseNawtobotor() = %v, want %v", n, tt.want)
+			}
 
 		})
 	}
