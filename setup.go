@@ -10,6 +10,8 @@ import (
 	"github.com/jakubjastrabik/nautobotor/ramrecords"
 )
 
+var Version = "v0.4.0"
+
 // init registers this plugin.
 func init() { plugin.Register("nautobotor", setup) }
 
@@ -21,6 +23,9 @@ func setup(c *caddy.Controller) error {
 	if err != nil {
 		return plugin.Error("Nautobotor", err)
 	}
+
+	// Log plugin version
+	log.Infof("Started plugin version %s", Version)
 
 	// Add a startup function that will -- after all plugins have been loaded -- check if the
 	// prometheus plugin has been used - if so we will export metrics. We can only register
