@@ -59,36 +59,18 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 		}
 	}
 
-	reposEqualA(t, e, n)
+	ip := map[string]string{
+		"test.if.lastmile.sk.":   "192.168.1.1",
+		"ans-m1.if.lastmile.sk.": "172.16.5.90",
+	}
+
+	for name, i := range ip {
+		reposEqualA(t, e, n, name, i)
+	}
+
 	reposEqualSOA(t, e, n)
+	reposEqualNS(t, e, n)
 
-	return true
-}
-
-func reposEqualA(t *testing.T, e, n Nautobotor) bool {
-	rec := dnstest.NewRecorder(&test.ResponseWriter{})
-	r := new(dns.Msg)
-	r.SetQuestion("test.if.lastmile.sk.", dns.TypeA)
-
-	rcode, err := n.ServeDNS(context.Background(), rec, r)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-		return false
-	}
-	if rcode != 0 {
-		t.Errorf("Expected rcode %v, got %v", 0, rcode)
-		return false
-	}
-	if rec.Msg.Answer == nil {
-		t.Errorf("no response from dns query")
-		return false
-	}
-	IP := rec.Msg.Answer[0].(*dns.A).A.String()
-
-	if IP != "192.168.1.1" {
-		t.Errorf("Expected %v, got %v", "192.168.1.1", IP)
-		return false
-	}
 	return true
 }
 
@@ -114,6 +96,62 @@ func reposEqualSOA(t *testing.T, e, n Nautobotor) bool {
 
 	if soa != "ns.if.lastmile.sk." {
 		t.Errorf("Expected %v, got %v", "ns.if.lastmile.sk.", soa)
+		return false
+	}
+
+	return true
+}
+
+func reposEqualNS(t *testing.T, e, n Nautobotor) bool {
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	r := new(dns.Msg)
+	r.SetQuestion("if.lastmile.sk.", dns.TypeNS)
+
+	rcode, err := n.ServeDNS(context.Background(), rec, r)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+		return false
+	}
+	if rcode != 0 {
+		t.Errorf("Expected rcode %v, got %v", 0, rcode)
+		return false
+	}
+	if rec.Msg.Answer == nil {
+		t.Errorf("no response from dns query")
+		return false
+	}
+
+	ns := rec.Msg.Answer[0].(*dns.NS).String()
+	if ns != "if.lastmile.sk.	3600	IN	NS	ans-m1.if.lastmile.sk." {
+		t.Errorf("Expected %v, got %v", "if.lastmile.sk.	3600	IN	NS	ans-m1.if.lastmile.sk.", ns)
+		return false
+	}
+
+	return true
+}
+
+func reposEqualA(t *testing.T, e, n Nautobotor, name, ip string) bool {
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	r := new(dns.Msg)
+	r.SetQuestion(name, dns.TypeA)
+
+	rcode, err := n.ServeDNS(context.Background(), rec, r)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+		return false
+	}
+	if rcode != 0 {
+		t.Errorf("Expected rcode %v, got %v", 0, rcode)
+		return false
+	}
+	if rec.Msg.Answer == nil {
+		t.Errorf("no response from dns query")
+		return false
+	}
+
+	ns := rec.Msg.Answer[0].(*dns.A).A.String()
+	if ns != ip {
+		t.Errorf("Expected %v, got %v", ip, ns)
 		return false
 	}
 
