@@ -19,7 +19,7 @@ func Test_newNautobotor(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:  "Esential test",
+			name:  "Essential test of predefined records",
 			input: "nautobotor {\nwebaddress :9002\n}\n",
 			want: Nautobotor{
 				WebAddress: ":9002",
@@ -59,6 +59,13 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 		}
 	}
 
+	reposEqualA(t, e, n)
+	reposEqualSOA(t, e, n)
+
+	return true
+}
+
+func reposEqualA(t *testing.T, e, n Nautobotor) bool {
 	rec := dnstest.NewRecorder(&test.ResponseWriter{})
 	r := new(dns.Msg)
 	r.SetQuestion("test.if.lastmile.sk.", dns.TypeA)
@@ -66,9 +73,11 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 	rcode, err := n.ServeDNS(context.Background(), rec, r)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
+		return false
 	}
 	if rcode != 0 {
 		t.Errorf("Expected rcode %v, got %v", 0, rcode)
+		return false
 	}
 	if rec.Msg.Answer == nil {
 		t.Errorf("no response from dns query")
@@ -78,6 +87,34 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 
 	if IP != "192.168.1.1" {
 		t.Errorf("Expected %v, got %v", "192.168.1.1", IP)
+		return false
+	}
+	return true
+}
+
+func reposEqualSOA(t *testing.T, e, n Nautobotor) bool {
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	r := new(dns.Msg)
+	r.SetQuestion("if.lastmile.sk.", dns.TypeSOA)
+
+	rcode, err := n.ServeDNS(context.Background(), rec, r)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+		return false
+	}
+	if rcode != 0 {
+		t.Errorf("Expected rcode %v, got %v", 0, rcode)
+		return false
+	}
+	if rec.Msg.Answer == nil {
+		t.Errorf("no response from dns query")
+		return false
+	}
+	soa := rec.Msg.Answer[0].(*dns.SOA).Ns
+
+	if soa != "ns.if.lastmile.sk." {
+		t.Errorf("Expected %v, got %v", "ns.if.lastmile.sk.", soa)
+		return false
 	}
 
 	return true

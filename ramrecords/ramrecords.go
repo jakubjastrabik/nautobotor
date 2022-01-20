@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/miekg/dns"
@@ -25,22 +26,34 @@ func New() *RamRecord {
 	return n
 }
 
-func (r *RamRecord) addZone(zone string) {
+func (re *RamRecord) newRecord(zone, s string) {
+	rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
+	if err != nil {
+		log.Errorf("error creating new record: err=%s\n", err)
+	}
+	rr.Header().Name = strings.ToLower(rr.Header().Name)
+	re.M[zone] = append(re.M[zone], rr)
+	log.Debugf("Create newRecord: zone=%s, record=%s", zone, rr)
+}
+
+func (re *RamRecord) addZone(zone string) {
 	log.Debug("adding zone to zones array")
 
 	// If zone is empty
-	if r.Zones == nil {
-		r.Zones = make([]string, 1)
-		r.Zones = []string{zone}
+	if re.Zones == nil {
+		re.Zones = make([]string, 1)
+		re.Zones = []string{zone}
+		// Generate zone SOA record
+		re.newRecord(zone, "@ SOA ns.if.lastmile.sk. noc-srv.lastmile.sk. "+time.Now().Format("2006010215")+" 7200 3600 1209600 3600")
 	} else {
 		// If zone already exists
-		for _, z := range r.Zones {
+		for _, z := range re.Zones {
 			if z == zone {
 				return
 			}
 		}
 		// If not, add zone to the struct
-		r.Zones = append(r.Zones, zone)
+		re.Zones = append(re.Zones, zone)
 	}
 }
 
@@ -48,7 +61,6 @@ func InitRamRecords() (*RamRecord, error) {
 	re := New()
 	// re.Zones = make([]string, 1)
 
-	re.addZone("if.lastmile.sk.")
 	re.addZone("if.lastmile.sk.")
 
 	// re.Zones = []string{"if.lastmile.sk."}
