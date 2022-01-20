@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/coredns/caddy"
-	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
 	"github.com/jakubjastrabik/nautobotor/ramrecords"
@@ -27,7 +26,6 @@ func Test_newNautobotor(t *testing.T) {
 				RM: &ramrecords.RamRecord{
 					Zones: []string{"if.lastmile.sk."},
 				},
-				Next: plugin.Handler(nil),
 			},
 			wantErr: false,
 		},
@@ -51,17 +49,19 @@ func Test_newNautobotor(t *testing.T) {
 
 func reposEqual(t *testing.T, e, n Nautobotor) bool {
 	if e.WebAddress != n.WebAddress {
+		t.Errorf("webaddress is different. Expected %v, got %v", e, n)
 		return false
 	}
 	for i, r := range e.RM.Zones {
 		if r != n.RM.Zones[i] {
+			t.Errorf("zone is different. Expected %v, got %v", r, n.RM.Zones[i])
 			return false
 		}
 	}
 
 	rec := dnstest.NewRecorder(&test.ResponseWriter{})
 	r := new(dns.Msg)
-	r.SetQuestion("my_host.if.lastmile.sk.", dns.TypeA)
+	r.SetQuestion("test.if.lastmile.sk.", dns.TypeA)
 
 	rcode, err := n.ServeDNS(context.Background(), rec, r)
 	if err != nil {
@@ -70,10 +70,14 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 	if rcode != 0 {
 		t.Errorf("Expected rcode %v, got %v", 0, rcode)
 	}
+	if rec.Msg.Answer == nil {
+		t.Errorf("no response from dns query")
+		return false
+	}
 	IP := rec.Msg.Answer[0].(*dns.A).A.String()
 
-	if IP != "10.0.0.2" {
-		t.Errorf("Expected %v, got %v", "10.0.0.2", IP)
+	if IP != "192.168.1.1" {
+		t.Errorf("Expected %v, got %v", "192.168.1.1", IP)
 	}
 
 	return true

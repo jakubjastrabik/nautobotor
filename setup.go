@@ -71,7 +71,7 @@ func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
 	}
 
 	var err error
-	n.RM, err = ramrecords.NewRamRecords()
+	n.RM, err = ramrecords.InitRamRecords()
 	if err != nil {
 		log.Error(err)
 	}
