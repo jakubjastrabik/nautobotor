@@ -47,3 +47,10 @@ func cutCIDRMask(ip string) string {
 	}
 	return ipvAddr.String()
 }
+
+// Cut zone from FQDN
+func parseZone(name string) string {
+	name = strings.Trim(name, strings.Split(name, ".")[0])
+	name = strings.Trim(name, ".") + "."
+	return name
+}

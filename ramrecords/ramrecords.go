@@ -1,6 +1,8 @@
 package ramrecords
 
 import (
+	"strings"
+
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/miekg/dns"
 )
@@ -66,7 +68,6 @@ func InitRamRecords() (*RamRecord, error) {
 
 	// Test static string
 	// TODO: replace with dynamic variables gether from nautobot
-	zone := "if.lastmile.sk."
 	dnsNS := map[string]string{
 		"ans-m1": "172.16.5.90",
 		"arn-t1": "172.16.5.76",
@@ -76,14 +77,13 @@ func InitRamRecords() (*RamRecord, error) {
 	// TODO: replace with dynamic variables gether from nautobot
 	ipFamily := int8(4)
 	ip_add := "192.168.1.1/24"
-	dnsName := "test"
+	dnsName := "test.if.lastmile.sk"
 
 	// Add zone to Zones
-	re.addZone(zone, dnsNS)
+	re.addZone(parseZone(dnsName), dnsNS)
 
-	// TODO: try parse zone from FQDN string
 	// Add record to zone table
-	re.addRecord(ipFamily, ip_add, zone, dnsName)
+	re.addRecord(ipFamily, ip_add, parseZone(dnsName), strings.Split(dnsName, ".")[0])
 
 	return re, nil
 }
