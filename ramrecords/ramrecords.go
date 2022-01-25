@@ -1,10 +1,6 @@
 package ramrecords
 
 import (
-	"errors"
-	"fmt"
-	"strings"
-
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/miekg/dns"
 )
@@ -23,18 +19,6 @@ func New() *RamRecord {
 	n := new(RamRecord)
 	n.M = make(map[string][]dns.RR)
 	return n
-}
-
-// newRecord, generate dns.RR records for each zones, records
-// data will be written to the ramRecord struct
-func (re *RamRecord) newRecord(zone, s string) {
-	rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
-	if err != nil {
-		log.Errorf("error creating new record: err=%s\n", err)
-	}
-	rr.Header().Name = strings.ToLower(rr.Header().Name)
-	re.M[zone] = append(re.M[zone], rr)
-	log.Debugf("Create newRecord: zone=%s, record=%s", zone, rr)
 }
 
 // addZone handling proces to generate all necessary records wtih multiple types
@@ -61,30 +45,45 @@ func (re *RamRecord) addZone(zone string, dnsNS map[string]string) {
 	}
 }
 
+func (re *RamRecord) addRecord(ipFamily int8, ip, zone, dnsName string) {
+	log.Debug("adding record to the zone records array")
+
+	// TODO: need to implement way to handle different types of DNS record
+	switch ipFamily {
+	case 4:
+		re.newRecord(zone, dnsName+" A "+cutCIDRMask(ip))
+	case 6:
+		re.newRecord(zone, dnsName+" AAAA "+cutCIDRMask(ip))
+	}
+}
+
+// TODO: need to handle duplicated FQDN records
+// May useful this function
+// dns.IsDuplicate()
+
 func InitRamRecords() (*RamRecord, error) {
 	re := New()
-	// re.Zones = make([]string, 1)
 
+	// Test static string
+	// TODO: replace with dynamic variables gether from nautobot
+	zone := "if.lastmile.sk."
 	dnsNS := map[string]string{
 		"ans-m1": "172.16.5.90",
 		"arn-t1": "172.16.5.76",
 		"arn-x1": "172.16.5.77",
 	}
+	// Test static string
+	// TODO: replace with dynamic variables gether from nautobot
+	ipFamily := int8(4)
+	ip_add := "192.168.1.1/24"
+	dnsName := "test"
 
-	re.addZone("if.lastmile.sk.", dnsNS)
+	// Add zone to Zones
+	re.addZone(zone, dnsNS)
 
-	for _, zone := range re.Zones {
-		s := "test."
-		ip := "192.168.1.1"
-		ttl := 60
-		rr, err := dns.NewRR(fmt.Sprintf("%s %d A %s", s+zone, ttl, ip))
-		if err != nil {
-			return re, errors.New("Could not parse Nautobotor config")
-		}
-
-		rr.Header().Name = strings.ToLower(rr.Header().Name)
-		re.M[zone] = append(re.M[zone], rr)
-	}
+	// TODO: try parse zone from FQDN string
+	// Add record to zone table
+	re.addRecord(ipFamily, ip_add, zone, dnsName)
 
 	return re, nil
 }

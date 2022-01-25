@@ -89,7 +89,7 @@ func reposEqualSOA(t *testing.T, e, n Nautobotor) bool {
 		return false
 	}
 	if rec.Msg.Answer == nil {
-		t.Errorf("no response from dns query")
+		t.Errorf("no SOA response from dns query")
 		return false
 	}
 	soa := rec.Msg.Answer[0].(*dns.SOA).Ns
@@ -117,7 +117,7 @@ func reposEqualNS(t *testing.T, e, n Nautobotor) bool {
 		return false
 	}
 	if rec.Msg.Answer == nil {
-		t.Errorf("no response from dns query")
+		t.Errorf("no NS response from dns query")
 		return false
 	}
 
@@ -145,7 +145,7 @@ func reposEqualA(t *testing.T, e, n Nautobotor, name, ip string) bool {
 		return false
 	}
 	if rec.Msg.Answer == nil {
-		t.Errorf("no response from dns query")
+		t.Errorf("no A response from dns query")
 		return false
 	}
 
