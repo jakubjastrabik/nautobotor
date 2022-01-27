@@ -135,18 +135,17 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 	log.Debug("Start handling DNS record")
 	log.Debug("Unmarshaled data from webhook to be add to DNS: data=", ip)
 
-	// TODO: Handle error
-
-	// _, err = n.RM.AddZone("if.lastmile.sk")
-	// if err != nil {
-	// 	log.Errorf("error adding zone: err=%s\n", err)
-	// }
-	// _, err = n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, "if.lastmile.sk")
-	// if err != nil {
-	// 	log.Errorf("error adding record to zone %s: err=%s\n", "if.lastmile.sk", err)
-	// }
-	// log.Info("handleData() Zones:", n.RM.Zones)
-	// log.Info("handleData() Records:", n.RM.M)
+	switch ip.Event {
+	case "created":
+		log.Debug("Received webhook to creat")
+		n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
+	case "deleted":
+		log.Debug("Received webhook to delet")
+	case "edited":
+		log.Debug("Received webhook to edit")
+	default:
+		log.Errorf("Unable processed Event: %v", ip.Event)
+	}
 
 	return nil
 }

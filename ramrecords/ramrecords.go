@@ -23,8 +23,8 @@ func New() *RamRecord {
 	return n
 }
 
-// addZone handling proces to generate all necessary records wtih multiple types
-func (re *RamRecord) addZone(zone string, dnsNS map[string]string) {
+// AddZone handling proces to generate all necessary records wtih multiple types
+func (re *RamRecord) AddZone(zone string, dnsNS map[string]string) {
 	log.Debug("adding zone to zones array")
 
 	// If zone is empty
@@ -47,15 +47,16 @@ func (re *RamRecord) addZone(zone string, dnsNS map[string]string) {
 	}
 }
 
-func (re *RamRecord) addRecord(ipFamily int8, ip, zone, dnsName string) {
+// AddRecord adds a record to the zone
+func (re *RamRecord) AddRecord(ipFamily int8, ip, dnsName string) {
 	log.Debug("adding record to the zone records array")
 
 	// TODO: need to implement way to handle different types of DNS record
 	switch ipFamily {
 	case 4:
-		re.newRecord(zone, dnsName+" A "+cutCIDRMask(ip))
+		re.newRecord(parseZone(dnsName), strings.Split(dnsName, ".")[0]+" A "+cutCIDRMask(ip))
 	case 6:
-		re.newRecord(zone, dnsName+" AAAA "+cutCIDRMask(ip))
+		re.newRecord(parseZone(dnsName), strings.Split(dnsName, ".")[0]+" AAAA "+cutCIDRMask(ip))
 	}
 }
 
@@ -80,10 +81,10 @@ func InitRamRecords() (*RamRecord, error) {
 	dnsName := "test.if.lastmile.sk"
 
 	// Add zone to Zones
-	re.addZone(parseZone(dnsName), dnsNS)
+	re.AddZone(parseZone(dnsName), dnsNS)
 
 	// Add record to zone table
-	re.addRecord(ipFamily, ip_add, parseZone(dnsName), strings.Split(dnsName, ".")[0])
+	re.AddRecord(ipFamily, ip_add, dnsName)
 
 	return re, nil
 }

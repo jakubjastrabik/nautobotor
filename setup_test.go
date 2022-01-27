@@ -1,17 +1,31 @@
 package nautobotor
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
 	"github.com/coredns/coredns/plugin/test"
+	"github.com/jakubjastrabik/nautobotor/nautobot"
 	"github.com/jakubjastrabik/nautobotor/ramrecords"
 	"github.com/miekg/dns"
 )
 
 func Test_newNautobotor(t *testing.T) {
+	// Create Testing Data
+	ip_add := &nautobot.IPaddress{
+		Event: "created",
+	}
+	ip_add.Data.Family.Value = 4
+	ip_add.Data.Address = "192.168.5.1/24"
+	ip_add.Data.Status.Value = "active"
+	ip_add.Data.Dns_name = "testweb.if.lastmile.sk"
+
 	tests := []struct {
 		name    string
 		input   string
@@ -40,6 +54,25 @@ func Test_newNautobotor(t *testing.T) {
 				return
 			}
 
+			if err := got.onStartup(); (err != nil) != tt.wantErr {
+				t.Errorf("Nautobotor.onStartup() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			// Test Add records via webhook
+			address := fmt.Sprintf("http://%s%s", tt.want.WebAddress, "/webhook")
+			jsonValue, err := json.Marshal(ip_add)
+			if err != nil {
+				t.Errorf("Nautobotor.Marshal unable correct return json data error = %s", err)
+			}
+			resp, err := http.Post(address, "application/json", bytes.NewBuffer(jsonValue))
+			if err != nil {
+				t.Errorf("Error posting JSON request error = %s", err)
+			}
+			if resp.StatusCode != 200 {
+				t.Errorf("Error posting JSON response error = %s", resp.Status)
+			}
+
+			// test DNS response
 			if !reposEqual(t, tt.want, got) {
 				t.Errorf("newNautobotor() = %v, want %v", got, tt.want)
 			}
@@ -60,8 +93,9 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 	}
 
 	ip := map[string]string{
-		"test.if.lastmile.sk.":   "192.168.1.1",
-		"ans-m1.if.lastmile.sk.": "172.16.5.90",
+		"test.if.lastmile.sk.":    "192.168.1.1",
+		"ans-m1.if.lastmile.sk.":  "172.16.5.90",
+		"testweb.if.lastmile.sk.": "192.168.5.1",
 	}
 
 	for name, i := range ip {
