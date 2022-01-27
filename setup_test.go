@@ -25,6 +25,13 @@ func Test_newNautobotor(t *testing.T) {
 	ip_add.Data.Address = "192.168.5.1/24"
 	ip_add.Data.Status.Value = "active"
 	ip_add.Data.Dns_name = "testweb.if.lastmile.sk"
+	ip_addDel := &nautobot.IPaddress{
+		Event: "deleted",
+	}
+	ip_addDel.Data.Family.Value = 4
+	ip_addDel.Data.Address = "172.16.5.76/24"
+	ip_addDel.Data.Status.Value = "active"
+	ip_addDel.Data.Dns_name = "arn-t1.if.lastmile.sk"
 
 	tests := []struct {
 		name    string
@@ -72,6 +79,18 @@ func Test_newNautobotor(t *testing.T) {
 				t.Errorf("Error posting JSON response error = %s", resp.Status)
 			}
 
+			jsonValue, err = json.Marshal(ip_addDel)
+			if err != nil {
+				t.Errorf("Nautobotor.Marshal unable correct return json data error = %s", err)
+			}
+			resp, err = http.Post(address, "application/json", bytes.NewBuffer(jsonValue))
+			if err != nil {
+				t.Errorf("Error posting JSON request error = %s", err)
+			}
+			if resp.StatusCode != 200 {
+				t.Errorf("Error posting JSON response error = %s", resp.Status)
+			}
+
 			// test DNS response
 			if !reposEqual(t, tt.want, got) {
 				t.Errorf("newNautobotor() = %v, want %v", got, tt.want)
@@ -96,6 +115,7 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 		"test.if.lastmile.sk.":    "192.168.1.1",
 		"ans-m1.if.lastmile.sk.":  "172.16.5.90",
 		"testweb.if.lastmile.sk.": "192.168.5.1",
+		// "arn-t1.if.lastmile.sk.":  "172.16.5.76",
 	}
 
 	for name, i := range ip {

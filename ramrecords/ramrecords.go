@@ -47,6 +47,36 @@ func (re *RamRecord) AddZone(zone string, dnsNS map[string]string) {
 	}
 }
 
+// RemoveRecord remove a record from zone
+func (re *RamRecord) RemoveRecord(ipFamily int8, ip, dnsName string) {
+	var s string
+	zone := parseZone(dnsName)
+
+	switch ipFamily {
+	case 4:
+		s = (strings.Split(dnsName, ".")[0] + " A " + cutCIDRMask(ip))
+
+	case 6:
+		s = (strings.Split(dnsName, ".")[0] + " AAAA " + cutCIDRMask(ip))
+	}
+
+	rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
+	if err != nil {
+		log.Errorf("error creating new record: err=%s\n", err)
+	}
+	rr.Header().Name = strings.ToLower(rr.Header().Name)
+
+	// Find && deleted record from zone
+	for record, rrD := range re.M[zone] {
+		if dns.IsDuplicate(rrD, rr) {
+			re.M[zone][record] = re.M[zone][len(re.M[zone])-1]
+			re.M[zone][len(re.M[zone])-1] = nil
+			re.M[zone] = re.M[zone][:len(re.M[zone])-1]
+			return
+		}
+	}
+}
+
 // AddRecord adds a record to the zone
 func (re *RamRecord) AddRecord(ipFamily int8, ip, dnsName string) {
 	log.Debug("adding record to the zone records array")

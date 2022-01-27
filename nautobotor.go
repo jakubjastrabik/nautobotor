@@ -141,6 +141,7 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 		n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
 	case "deleted":
 		log.Debug("Received webhook to delet")
+		n.RM.RemoveRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
 	case "edited":
 		log.Debug("Received webhook to edit")
 	default:
