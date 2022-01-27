@@ -2,11 +2,16 @@ package nautobotor
 
 import (
 	"context"
+	"io/ioutil"
+	"net"
+	"net/http"
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/metrics"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
+	"github.com/coredns/coredns/plugin/pkg/reuseport"
 	"github.com/coredns/coredns/request"
+	"github.com/jakubjastrabik/nautobotor/nautobot"
 	"github.com/jakubjastrabik/nautobotor/ramrecords"
 	"github.com/miekg/dns"
 )
@@ -15,6 +20,8 @@ import (
 type Nautobotor struct {
 	WebAddress string
 	RM         *ramrecords.RamRecord
+	ln         net.Listener
+	mux        *http.ServeMux
 	Next       plugin.Handler
 }
 
@@ -81,6 +88,67 @@ func (n Nautobotor) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 	}
 	return dns.RcodeSuccess, nil
 
+}
+
+// TODO: Add comment
+func (n *Nautobotor) onStartup() error {
+	ln, err := reuseport.Listen("tcp", n.WebAddress)
+	if err != nil {
+		return err
+	}
+
+	n.ln = ln
+	n.mux = http.NewServeMux()
+
+	n.mux.HandleFunc("/webhook", func(w http.ResponseWriter, r *http.Request) {
+		log.Debug("Start handling webhook data")
+
+		// handleWebhook are used to processed nautobot webhook
+		payload, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Errorf("error reading request body: err=%s\n", err)
+			return
+		}
+		defer r.Body.Close()
+
+		// Unmarshal data to strcut
+		err = n.handleData(nautobot.NewIPaddress(payload))
+		if err != nil {
+			log.Errorf("error handling DNS data: err=%s\n", err)
+		}
+
+	})
+
+	go func() {
+		err := http.Serve(n.ln, n.mux)
+		if err != nil {
+			log.Errorf("errro initializing web server: err=%s\n", err)
+		}
+	}()
+
+	return nil
+}
+
+// handleData are used to handle incoming data structures
+// returning pointers to nautobot DNS records structures
+func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
+	log.Debug("Start handling DNS record")
+	log.Debug("Unmarshaled data from webhook to be add to DNS: data=", ip)
+
+	// TODO: Handle error
+
+	// _, err = n.RM.AddZone("if.lastmile.sk")
+	// if err != nil {
+	// 	log.Errorf("error adding zone: err=%s\n", err)
+	// }
+	// _, err = n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, "if.lastmile.sk")
+	// if err != nil {
+	// 	log.Errorf("error adding record to zone %s: err=%s\n", "if.lastmile.sk", err)
+	// }
+	// log.Info("handleData() Zones:", n.RM.Zones)
+	// log.Info("handleData() Records:", n.RM.M)
+
+	return nil
 }
 
 // Name implements the Handler interface.

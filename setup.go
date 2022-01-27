@@ -43,6 +43,15 @@ func setup(c *caddy.Controller) error {
 		return nil
 	})
 
+	c.OnStartup(func() error {
+		err := nautobotorPlugin.onStartup()
+		if err != nil {
+			log.Errorf("Unable startup web server: err=%s\n", err)
+			return err
+		}
+		return nil
+	})
+
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
 		return nautobotorPlugin
@@ -75,6 +84,7 @@ func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
 		return Nautobotor{}, errors.New("Could not parse config")
 	}
 
+	// Init RamRecord
 	var err error
 	n.RM, err = ramrecords.InitRamRecords()
 	if err != nil {
