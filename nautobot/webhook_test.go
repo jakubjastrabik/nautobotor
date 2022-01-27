@@ -24,9 +24,9 @@ func TestNewIPaddress(t *testing.T) {
 		Event: "created",
 	}
 	ip_add.Data.Family.Value = 4
-	ip_add.Data.Address = "192.168.0.1/24"
+	ip_add.Data.Address = "192.168.1.1/24"
 	ip_add.Data.Status.Value = "active"
-	ip_add.Data.Dns_name = "test.dns.ns"
+	ip_add.Data.Dns_name = "test.if.lastmile.sk."
 
 	// Marshal Testing data,
 	// Test Unmarshal NewIPaddress function

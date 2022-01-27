@@ -10,11 +10,7 @@ import (
 	"github.com/jakubjastrabik/nautobotor/ramrecords"
 )
 
-var Version = "v0.3.6"
-
-const (
-	defaultWebAddress = ":9002"
-)
+var Version = "v0.4.0"
 
 // init registers this plugin.
 func init() { plugin.Register("nautobotor", setup) }
@@ -29,25 +25,8 @@ func setup(c *caddy.Controller) error {
 		return plugin.Error("Nautobotor", err)
 	}
 
+	// Log plugin version
 	log.Infof("Started plugin version %s", Version)
-
-	c.OnStartup(func() error {
-		nautobotorPlugin.RM, err = ramrecords.NewRamRecords()
-		if err != nil {
-			log.Errorf("errro initializing module structure: err=%s\n", err)
-			return err
-		}
-		return nil
-	})
-
-	c.OnStartup(func() error {
-		err := nautobotorPlugin.onStartup()
-		if err != nil {
-			log.Errorf("Unable startup web server: err=%s\n", err)
-			return err
-		}
-		return nil
-	})
 
 	// Add a startup function that will -- after all plugins have been loaded -- check if the
 	// prometheus plugin has been used - if so we will export metrics. We can only register
@@ -62,6 +41,15 @@ func setup(c *caddy.Controller) error {
 				x.MustRegister(requestCount)
 			}
 		})
+		return nil
+	})
+
+	c.OnStartup(func() error {
+		err := nautobotorPlugin.onStartup()
+		if err != nil {
+			log.Errorf("Unable startup web server: err=%s\n", err)
+			return err
+		}
 		return nil
 	})
 
@@ -97,8 +85,11 @@ func parseNawtobotor(c *caddy.Controller) (*Nautobotor, error) {
 		}
 	}
 
-	if n.WebAddress == "" {
-		return nil, errors.New("Could not parse webaddress from congiguration values")
+	// Init RamRecord
+	var err error
+	n.RM, err = ramrecords.InitRamRecords()
+	if err != nil {
+		log.Error(err)
 	}
 
 	return n, nil

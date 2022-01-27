@@ -1,7 +1,6 @@
 package ramrecords
 
 import (
-	"net"
 	"strings"
 	"time"
 
@@ -14,70 +13,79 @@ type RamRecord struct {
 	M     map[string][]dns.RR // Map of DNS Records
 }
 
+// Init log variable
 var log = clog.NewWithPlugin("nautobotor")
 
-// NewRamRecords is used to initialize space for all records
-// allocated first sets of records from nautobot via api.
-// Returns a pointer to a new and intialized Records.
-func NewRamRecords() (*RamRecord, error) {
-	log.Debug("initializing ramrecords array")
-	re := new(RamRecord)
-	re.M = make(map[string][]dns.RR)
-
-	return re, nil
+// New returns a pointer to a new and intialized Records.
+func New() *RamRecord {
+	log.Debug("initializing RamRecord struct")
+	n := new(RamRecord)
+	n.M = make(map[string][]dns.RR)
+	return n
 }
 
-func (re *RamRecord) newRecord(zone, s string) {
-	rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
-	if err != nil {
-		log.Errorf("error creating new record: err=%s\n", err)
+// AddZone handling proces to generate all necessary records wtih multiple types
+func (re *RamRecord) AddZone(zone string, dnsNS map[string]string) {
+	log.Debug("adding zone to zones array")
+
+	// If zone is empty
+	if re.Zones == nil {
+		re.Zones = make([]string, 1)
+		re.Zones = []string{zone}
+
+		re.handleAddZone(zone, dnsNS)
+	} else {
+		// If zone already exists
+		for _, z := range re.Zones {
+			if z == zone {
+				return
+			}
+		}
+		// If not, add zone to the struct
+		re.Zones = append(re.Zones, zone)
+
+		re.handleAddZone(zone, dnsNS)
 	}
-	rr.Header().Name = strings.ToLower(rr.Header().Name)
-	re.M[zone] = append(re.M[zone], rr)
-	log.Debugf("Create newRecord: zone=%s, record=%s", zone, rr)
 }
 
-func (re *RamRecord) AddZone(zone string) (*RamRecord, error) {
-	log.Debug("Start adding zone to ramrecords")
-	re.Zones = append(re.Zones, zone)
+// AddRecord adds a record to the zone
+func (re *RamRecord) AddRecord(ipFamily int8, ip, dnsName string) {
+	log.Debug("adding record to the zone records array")
 
-	// TODO: auto generate this section from the nautobot api response
-	// soa, create a new SOA record
-	re.newRecord(zone, "@ SOA ns.if.lastmile.sk. noc-srv.lastmile.sk. "+time.Now().Format("2006010215")+" 7200 3600 1209600 3600")
+	// TODO: need to implement way to handle different types of DNS record
+	switch ipFamily {
+	case 4:
+		re.newRecord(parseZone(dnsName), strings.Split(dnsName, ".")[0]+" A "+cutCIDRMask(ip))
+	case 6:
+		re.newRecord(parseZone(dnsName), strings.Split(dnsName, ".")[0]+" AAAA "+cutCIDRMask(ip))
+	}
+}
 
-	dnsServer := map[string]string{
+// TODO: need to handle duplicated FQDN records
+// May useful this function
+// dns.IsDuplicate()
+
+func InitRamRecords() (*RamRecord, error) {
+	re := New()
+
+	// Test static string
+	// TODO: replace with dynamic variables gether from nautobot
+	dnsNS := map[string]string{
 		"ans-m1": "172.16.5.90",
 		"arn-t1": "172.16.5.76",
 		"arn-x1": "172.16.5.77",
 	}
+	// Test static string
+	// TODO: replace with dynamic variables gether from nautobot
+	ipFamily := int8(4)
+	ip_add := "192.168.1.1/24"
+	dnsName := "test.if.lastmile.sk"
 
-	// TODO: auto generate this section from the nautobot api response
-	// NS, create a new NS record
-	for k, v := range dnsServer {
-		re.newRecord(zone, "@ NS "+k)
-		re.newRecord(zone, k+" A "+v)
-	}
+	// Add zone to Zones
+	re.AddZone(parseZone(dnsName), dnsNS)
 
-	return re, nil
-}
-
-func (re *RamRecord) AddRecord(ipFamily int8, ip string, dnsName string, zone string) (*RamRecord, error) {
-	log.Debug("Start adding record to ramrecords")
-
-	// Cut of CIDRMask
-	ipvAddr, _, err := net.ParseCIDR(ip)
-	if err != nil {
-		log.Errorf("error parse IP address: err=%s\n", err)
-	}
-
-	switch ipFamily {
-	case 4:
-		re.newRecord(zone, dnsName+" A "+ipvAddr.String())
-	case 6:
-		re.newRecord(zone, dnsName+" AAAA "+ipvAddr.String())
-	}
-
-	log.Debug("After Record procesing procesing", re.M[zone])
+	// Add record to zone table
+	re.AddRecord(ipFamily, ip_add, dnsName)
 
 	return re, nil
 }

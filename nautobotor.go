@@ -20,11 +20,9 @@ import (
 type Nautobotor struct {
 	WebAddress string
 	RM         *ramrecords.RamRecord
-
-	ln  net.Listener
-	mux *http.ServeMux
-
-	Next plugin.Handler
+	ln         net.Listener
+	mux        *http.ServeMux
+	Next       plugin.Handler
 }
 
 // Define log to be a logger with the plugin name in it. This way we can just use log.Info and
@@ -95,6 +93,7 @@ func (n Nautobotor) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 
 }
 
+// TODO: Add comment
 func (n *Nautobotor) onStartup() error {
 	ln, err := reuseport.Listen("tcp", n.WebAddress)
 	if err != nil {
@@ -137,24 +136,20 @@ func (n *Nautobotor) onStartup() error {
 // returning pointers to nautobot DNS records structures
 func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 	log.Debug("Start handling DNS record")
-	var err error
-
 	log.Debug("Unmarshaled data from webhook to be add to DNS: data=", ip)
 
-	// Debug na vstupne data je OK. Problem teda bude zjavne nizssie
+	switch ip.Event {
+	case "created":
+		log.Debug("Received webhook to creat")
+		n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
+	case "deleted":
+		log.Debug("Received webhook to delet")
+	case "edited":
+		log.Debug("Received webhook to edit")
+	default:
+		log.Errorf("Unable processed Event: %v", ip.Event)
+	}
 
-	// TODO: Handle error
-	// parse zone name from host dnsName record
-	_, err = n.RM.AddZone("if.lastmile.sk")
-	if err != nil {
-		log.Errorf("error adding zone: err=%s\n", err)
-	}
-	_, err = n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, "if.lastmile.sk")
-	if err != nil {
-		log.Errorf("error adding record to zone %s: err=%s\n", "if.lastmile.sk", err)
-	}
-	log.Info("handleData() Zones:", n.RM.Zones)
-	log.Info("handleData() Records:", n.RM.M)
 	return nil
 }
 
