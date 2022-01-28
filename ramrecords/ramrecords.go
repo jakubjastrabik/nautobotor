@@ -90,6 +90,51 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip, dnsName string) {
 	}
 }
 
+// UpdateRecord update a record in the zone
+func (re *RamRecord) UpdateRecord(ipFamily int8, ip, dnsName string) {
+	log.Debug("updating record from the zone records array")
+
+	// Prepare variables
+	zone := parseZone(dnsName)
+	ipO := cutCIDRMask(ip)
+
+	for _, record := range re.M[zone] {
+		// try find the record in the zone
+		if ipO == dns.Field(record, 1) {
+			// verify if record is correct
+			var s string
+			dnsNameO := record.Header().Name
+			zone := parseZone(dnsNameO)
+
+			switch ipFamily {
+			case 4:
+				s = (strings.Split(dnsNameO, ".")[0] + " A " + cutCIDRMask(ip))
+
+			case 6:
+				s = (strings.Split(dnsNameO, ".")[0] + " AAAA " + cutCIDRMask(ip))
+			}
+
+			rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
+			if err != nil {
+				log.Errorf("error creating new record: err=%s\n", err)
+			}
+			rr.Header().Name = strings.ToLower(rr.Header().Name)
+
+			if dns.IsDuplicate(record, rr) {
+				// If the record is corret => (deleted, create new one) = Update record
+				log.Debug("delete record, creating new record")
+
+				// remove existing record
+				re.RemoveRecord(ipFamily, ip, dnsNameO)
+				// add new record
+				re.AddRecord(ipFamily, ip, dnsName)
+			}
+
+			return
+		}
+	}
+}
+
 // TODO: need to handle duplicated FQDN records
 // May useful this function
 // dns.IsDuplicate()

@@ -144,6 +144,7 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 		n.RM.RemoveRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
 	case "edited":
 		log.Debug("Received webhook to edit")
+		n.RM.UpdateRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
 	default:
 		log.Errorf("Unable processed Event: %v", ip.Event)
 	}
