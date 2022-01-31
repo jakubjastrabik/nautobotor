@@ -54,3 +54,12 @@ func parseZone(name string) string {
 	name = strings.Trim(name, ".") + "."
 	return name
 }
+
+// createRe Create reverse ADDPREESS
+func createRe(ip string) string {
+	a, err := dns.ReverseAddr(cutCIDRMask(ip))
+	if err != nil {
+		log.Debugf("Issue generate ReverseAddr error= %s", err)
+	}
+	return a
+}

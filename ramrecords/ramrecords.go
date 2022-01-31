@@ -84,9 +84,15 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip, dnsName string) {
 	// TODO: need to implement way to handle different types of DNS record
 	switch ipFamily {
 	case 4:
+		// Add A
 		re.newRecord(parseZone(dnsName), strings.Split(dnsName, ".")[0]+" A "+cutCIDRMask(ip))
+		// Add PTR
+		re.newRecord(parseZone(dnsName), createRe(ip)+" PTR "+strings.Split(dnsName, ".")[0])
 	case 6:
+		// Add AAAA
 		re.newRecord(parseZone(dnsName), strings.Split(dnsName, ".")[0]+" AAAA "+cutCIDRMask(ip))
+		// Add PTR
+		re.newRecord(parseZone(dnsName), createRe(ip)+" PTR "+strings.Split(dnsName, ".")[0])
 	}
 }
 
