@@ -144,7 +144,7 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 	reposEqualSOA(t, e, n)
 	reposEqualNS(t, e, n)
 	reposEqualPTR(t, e, n, "ans-m1.if.lastmile.sk.", "172.16.5.90")
-
+	reposEqualNSPTR(t, e, n)
 	return true
 }
 
@@ -255,6 +255,35 @@ func reposEqualPTR(t *testing.T, e, n Nautobotor, name, ip string) bool {
 	ns := rec.Msg.Answer[0].(*dns.PTR).Ptr
 	if ns != name {
 		t.Errorf("Expected %s, got %s", name, ns)
+		return false
+	}
+
+	return true
+}
+
+func reposEqualNSPTR(t *testing.T, e, n Nautobotor) bool {
+	rec := dnstest.NewRecorder(&test.ResponseWriter{})
+	r := new(dns.Msg)
+
+	r.SetQuestion("5.16.172.in-addr.arpa.", dns.TypeNS)
+
+	rcode, err := n.ServeDNS(context.Background(), rec, r)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+		return false
+	}
+	if rcode != 0 {
+		t.Errorf("Expected rcode %v, got %v", 0, rcode)
+		return false
+	}
+	if rec.Msg.Answer == nil {
+		t.Errorf("no NS response from dns query")
+		return false
+	}
+
+	ns := rec.Msg.Answer[0].(*dns.NS).String()
+	if ns != "5.16.172.in-addr.arpa.	3600	IN	NS	ans-m1.if.lastmile.sk." {
+		t.Errorf("Expected %v, got %v", "5.16.172.in-addr.arpa.	3600	IN	NS	ans-m1.if.lastmile.sk.", ns)
 		return false
 	}
 

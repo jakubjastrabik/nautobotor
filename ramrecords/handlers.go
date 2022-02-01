@@ -61,7 +61,7 @@ func (re *RamRecord) handlePTRAddZone(zone, zzone string, dnsNS map[string]strin
 
 	// Generate NS record for zone
 	for k, v := range dnsNS {
-		re.newRecord(zone, createRe(v)+" NS "+k+"."+zzone)
+		re.newRecord(zone, "@ NS "+k+"."+zzone)
 		re.newRecord(zone, createRe(v)+" PTR "+k+"."+zzone)
 	}
 }
