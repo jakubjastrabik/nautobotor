@@ -76,32 +76,19 @@ func (re *RamRecord) AddPTRZone(ipFamily int8, ip, dnsName string, dnsNS map[str
 
 // RemoveRecord remove a record from zone
 func (re *RamRecord) RemoveRecord(ipFamily int8, ip, dnsName string) {
-	var s string
 	zone := parseZone(dnsName)
 
 	switch ipFamily {
 	case 4:
-		s = (strings.Split(dnsName, ".")[0] + " A " + cutCIDRMask(ip))
-
+		// Delete A
+		re.handleRemoveRecord(zone, "", strings.Split(dnsName, ".")[0]+" A "+cutCIDRMask(ip))
+		// Delete PTR
+		re.handleRemoveRecord(parseZone(dnsName), parsePTRzone(ipFamily, ip), createRe(ip)+" PTR "+strings.Split(dnsName, ".")[0])
 	case 6:
-		s = (strings.Split(dnsName, ".")[0] + " AAAA " + cutCIDRMask(ip))
+		re.handleRemoveRecord(zone, "", strings.Split(dnsName, ".")[0]+" AAAA "+cutCIDRMask(ip))
+		re.handleRemoveRecord(parseZone(dnsName), parsePTRzone(ipFamily, ip), createRe(ip)+" PTR "+strings.Split(dnsName, ".")[0])
 	}
 
-	rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
-	if err != nil {
-		log.Errorf("error creating new record: err=%s\n", err)
-	}
-	rr.Header().Name = strings.ToLower(rr.Header().Name)
-
-	// Find && deleted record from zone
-	for record, rrD := range re.M[zone] {
-		if dns.IsDuplicate(rrD, rr) {
-			re.M[zone][record] = re.M[zone][len(re.M[zone])-1]
-			re.M[zone][len(re.M[zone])-1] = nil
-			re.M[zone] = re.M[zone][:len(re.M[zone])-1]
-			return
-		}
-	}
 }
 
 // AddRecord adds a record to the zone
@@ -118,7 +105,6 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip, dnsName string) {
 		re.newRecord(parseZone(dnsName), strings.Split(dnsName, ".")[0]+" AAAA "+cutCIDRMask(ip))
 	}
 
-	// re.newRecord(parseZone(dnsName), createRe(ip)+" PTR "+strings.Split(dnsName, ".")[0])
 	re.newPTRRecord(parseZone(dnsName), parsePTRzone(ipFamily, ip), createRe(ip)+" PTR "+strings.Split(dnsName, ".")[0])
 }
 

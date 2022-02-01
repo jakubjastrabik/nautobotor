@@ -133,7 +133,7 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 	ip := map[string]string{
 		"test.if.lastmile.sk.":   "172.16.5.3",
 		"ans-m1.if.lastmile.sk.": "172.16.5.90",
-		// "arn-t1.if.lastmile.sk.":  "172.16.5.76",
+		// "arn-t1.if.lastmile.sk.": "172.16.5.76",
 		"arn-f1.if.lastmile.sk.": "172.16.5.76",
 	}
 
@@ -248,7 +248,7 @@ func reposEqualPTR(t *testing.T, e, n Nautobotor, name, ip string) bool {
 		return false
 	}
 	if rec.Msg.Answer == nil {
-		t.Errorf("no A response from dns query")
+		t.Errorf("no PTR response from dns query")
 		return false
 	}
 

@@ -118,3 +118,24 @@ func parsePTRzone(ipFamily int8, ip string) string {
 
 	return dd
 }
+
+// handleRemoveRecord Use to help remove records from the zone
+func (re *RamRecord) handleRemoveRecord(zone, ptrzone, s string) {
+	rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
+	if err != nil {
+		log.Errorf("error creating new record: err=%s\n", err)
+	}
+	rr.Header().Name = strings.ToLower(rr.Header().Name)
+	if ptrzone != "" {
+		zone = ptrzone
+	}
+	// Find && deleted record from zone
+	for record, rrD := range re.M[zone] {
+		if dns.IsDuplicate(rrD, rr) {
+			re.M[zone][record] = re.M[zone][len(re.M[zone])-1]
+			re.M[zone][len(re.M[zone])-1] = nil
+			re.M[zone] = re.M[zone][:len(re.M[zone])-1]
+			return
+		}
+	}
+}
