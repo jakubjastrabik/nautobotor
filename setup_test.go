@@ -22,7 +22,7 @@ func Test_newNautobotor(t *testing.T) {
 		Event: "created",
 	}
 	ip_add.Data.Family.Value = 4
-	ip_add.Data.Address = "172.0.0.3/24"
+	ip_add.Data.Address = "172.16.5.3/24"
 	ip_add.Data.Status.Value = "active"
 	ip_add.Data.Dns_name = "test.if.lastmile.sk"
 	ip_addEdit := &nautobot.IPaddress{

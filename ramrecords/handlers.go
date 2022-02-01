@@ -114,7 +114,6 @@ func parsePTRzone(ipFamily int8, ip string) string {
 	if err != nil {
 		log.Debugf("Issue generate ReverseAddr error= %s", err)
 	}
-	dd = dd + "."
 
 	return dd
 }
