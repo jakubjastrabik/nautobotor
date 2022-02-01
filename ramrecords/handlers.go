@@ -108,10 +108,12 @@ func parsePTRzone(ipFamily int8, ip string) string {
 	if err != nil {
 		log.Error("failed to parse IP address")
 	}
-	ss, err := dns.ReverseAddr(zone.IP.String())
+
+	dd, err := dns.ReverseAddr(zone.IP.String())
+	dd = strings.Trim(dd, "0.")
 	if err != nil {
 		log.Debugf("Issue generate ReverseAddr error= %s", err)
 	}
 
-	return ss
+	return dd
 }

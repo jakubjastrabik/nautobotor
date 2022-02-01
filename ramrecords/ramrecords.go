@@ -116,8 +116,7 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip, dnsName string) {
 	case 6:
 		// Add AAAA
 		re.newRecord(parseZone(dnsName), strings.Split(dnsName, ".")[0]+" AAAA "+cutCIDRMask(ip))
-	}
-	// Add PTR
+	} // Add PTR
 	// re.newRecord(parsePTRzone(ipFamily, ip), createRe(ip)+" PTR "+dnsName)
 	re.newPTRRecord(parseZone(dnsName), parsePTRzone(ipFamily, ip), createRe(ip)+" PTR "+strings.Split(dnsName, ".")[0])
 }

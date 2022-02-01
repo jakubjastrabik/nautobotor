@@ -143,7 +143,7 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 
 	reposEqualSOA(t, e, n)
 	reposEqualNS(t, e, n)
-	reposEqualPTR(t, e, n, "ans-m1.if.lastmile.sk.", "172.16.5.90")
+	//reposEqualPTR(t, e, n, "ans-m1.if.lastmile.sk.", "172.16.5.90")
 
 	return true
 }

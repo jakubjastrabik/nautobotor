@@ -141,13 +141,12 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 		log.Debug("Received webhook to creat")
 
 		// Handle Normal zone
-		// Find if Zone exists
 		n.RM.AddZone(ip.Data.Dns_name, n.NS)
-		// Add record to the zone
-		n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
-
 		// Handle PTR zones
 		n.RM.AddPTRZone(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
+
+		// Add record to the zone
+		n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
 
 	case "deleted":
 		log.Debug("Received webhook to delet")
