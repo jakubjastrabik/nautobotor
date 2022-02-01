@@ -19,6 +19,7 @@ import (
 // Nautobotor is an nautobotor structure
 type Nautobotor struct {
 	WebAddress string
+	NS         map[string]string
 	RM         *ramrecords.RamRecord
 	ln         net.Listener
 	mux        *http.ServeMux
@@ -138,12 +139,21 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 	switch ip.Event {
 	case "created":
 		log.Debug("Received webhook to creat")
+
+		// Handle Normal zone
+		// Find if Zone exists
+		n.RM.AddZone(ip.Data.Dns_name, n.NS)
+		// Add record to the zone
 		n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
+
+		// Handle PTR zones
+		n.RM.AddPTRZone(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
+
 	case "deleted":
 		log.Debug("Received webhook to delet")
 		n.RM.RemoveRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
-	case "edited":
-		log.Debug("Received webhook to edit")
+	case "updated":
+		log.Debug("Received webhook to update")
 		n.RM.UpdateRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
 	default:
 		log.Errorf("Unable processed Event: %v", ip.Event)

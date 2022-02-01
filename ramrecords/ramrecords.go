@@ -23,9 +23,10 @@ func New() *RamRecord {
 	return n
 }
 
-// AddZone handling proces to generate all necessary records wtih multiple types
-func (re *RamRecord) AddZone(zone string, dnsNS map[string]string) {
+// AddZone handling proces to generate all necessary zone records wtih multiple types
+func (re *RamRecord) AddZone(dnsName string, dnsNS map[string]string) {
 	log.Debug("adding zone to zones array")
+	zone := parseZone(dnsName)
 
 	// If zone is empty
 	if re.Zones == nil {
@@ -44,6 +45,32 @@ func (re *RamRecord) AddZone(zone string, dnsNS map[string]string) {
 		re.Zones = append(re.Zones, zone)
 
 		re.handleAddZone(zone, dnsNS)
+	}
+}
+
+// AddPTRZone handling proces to generate all necessary PTR zone records wtih multiple types
+func (re *RamRecord) AddPTRZone(ipFamily int8, ip, dnsName string, dnsNS map[string]string) {
+	log.Debug("adding PTR zone to zones array")
+
+	zone := parsePTRzone(ipFamily, ip)
+
+	// If zone is empty
+	if re.Zones == nil {
+		re.Zones = make([]string, 1)
+		re.Zones = []string{zone}
+
+		re.handleAddZone(zone, dnsNS)
+	} else {
+		// If zone already exists
+		for _, z := range re.Zones {
+			if z == zone {
+				return
+			}
+		}
+		// If not, add zone to the struct
+		re.Zones = append(re.Zones, zone)
+
+		re.handlePTRAddZone(zone, parseZone(dnsName), dnsNS)
 	}
 }
 
@@ -86,14 +113,13 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip, dnsName string) {
 	case 4:
 		// Add A
 		re.newRecord(parseZone(dnsName), strings.Split(dnsName, ".")[0]+" A "+cutCIDRMask(ip))
-		// Add PTR
-		re.newRecord(parseZone(dnsName), createRe(ip)+" PTR "+strings.Split(dnsName, ".")[0])
 	case 6:
 		// Add AAAA
 		re.newRecord(parseZone(dnsName), strings.Split(dnsName, ".")[0]+" AAAA "+cutCIDRMask(ip))
-		// Add PTR
-		re.newRecord(parseZone(dnsName), createRe(ip)+" PTR "+strings.Split(dnsName, ".")[0])
 	}
+	// Add PTR
+	// re.newRecord(parsePTRzone(ipFamily, ip), createRe(ip)+" PTR "+dnsName)
+	re.newPTRRecord(parseZone(dnsName), parsePTRzone(ipFamily, ip), createRe(ip)+" PTR "+strings.Split(dnsName, ".")[0])
 }
 
 // UpdateRecord update a record in the zone
@@ -147,25 +173,6 @@ func (re *RamRecord) UpdateRecord(ipFamily int8, ip, dnsName string) {
 
 func InitRamRecords() (*RamRecord, error) {
 	re := New()
-
-	// Test static string
-	// TODO: replace with dynamic variables gether from nautobot
-	dnsNS := map[string]string{
-		"ans-m1": "172.16.5.90",
-		"arn-t1": "172.16.5.76",
-		"arn-x1": "172.16.5.77",
-	}
-	// Test static string
-	// TODO: replace with dynamic variables gether from nautobot
-	ipFamily := int8(4)
-	ip_add := "192.168.1.1/24"
-	dnsName := "test.if.lastmile.sk"
-
-	// Add zone to Zones
-	re.AddZone(parseZone(dnsName), dnsNS)
-
-	// Add record to zone table
-	re.AddRecord(ipFamily, ip_add, dnsName)
 
 	return re, nil
 }

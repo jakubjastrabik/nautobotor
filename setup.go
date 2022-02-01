@@ -10,7 +10,7 @@ import (
 	"github.com/jakubjastrabik/nautobotor/ramrecords"
 )
 
-var Version = "v0.4.1"
+var Version = "v0.4.3"
 
 // init registers this plugin.
 func init() { plugin.Register("nautobotor", setup) }
@@ -89,6 +89,12 @@ func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
 	n.RM, err = ramrecords.InitRamRecords()
 	if err != nil {
 		log.Error(err)
+	}
+
+	n.NS = map[string]string{
+		"ans-m1": "172.16.5.90/24",
+		"arn-t1": "172.16.5.76/24",
+		"arn-x1": "172.16.5.77/24",
 	}
 
 	return n, nil
