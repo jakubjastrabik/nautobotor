@@ -79,7 +79,7 @@ func cutCIDRMask(ip string) string {
 
 // Cut zone from FQDN
 func parseZone(name string) string {
-	name = strings.Trim(name, strings.Split(name, ".")[0])
+	name = strings.Replace(name, strings.Split(name, ".")[0], "", 1)
 	name = strings.Trim(name, ".") + "."
 	return name
 }
@@ -110,7 +110,7 @@ func parsePTRzone(ipFamily int8, ip string) string {
 	}
 
 	dd, err := dns.ReverseAddr(zone.IP.String())
-	dd = strings.Trim(dd, "0.")
+	dd = strings.Replace(dd, "0.", "", 1)
 	if err != nil {
 		log.Debugf("Issue generate ReverseAddr error= %s", err)
 	}

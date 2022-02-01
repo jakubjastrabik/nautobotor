@@ -117,8 +117,10 @@ func (re *RamRecord) UpdateRecord(ipFamily int8, ip, dnsName string) {
 	ipO := cutCIDRMask(ip)
 
 	for _, record := range re.M[zone] {
+		log.Debug("try find the record in the zone")
 		// try find the record in the zone
 		if ipO == dns.Field(record, 1) {
+			log.Debug("verify if record is correct")
 			// verify if record is correct
 			var s string
 			dnsNameO := record.Header().Name
@@ -127,7 +129,6 @@ func (re *RamRecord) UpdateRecord(ipFamily int8, ip, dnsName string) {
 			switch ipFamily {
 			case 4:
 				s = (strings.Split(dnsNameO, ".")[0] + " A " + cutCIDRMask(ip))
-
 			case 6:
 				s = (strings.Split(dnsNameO, ".")[0] + " AAAA " + cutCIDRMask(ip))
 			}

@@ -22,7 +22,7 @@ func Test_newNautobotor(t *testing.T) {
 		Event: "created",
 	}
 	ip_add.Data.Family.Value = 4
-	ip_add.Data.Address = "172.16.5.3/24"
+	ip_add.Data.Address = "172.0.0.3/24"
 	ip_add.Data.Status.Value = "active"
 	ip_add.Data.Dns_name = "test.if.lastmile.sk"
 	ip_addEdit := &nautobot.IPaddress{
@@ -31,7 +31,7 @@ func Test_newNautobotor(t *testing.T) {
 	ip_addEdit.Data.Family.Value = 4
 	ip_addEdit.Data.Address = "172.16.5.76/24"
 	ip_addEdit.Data.Status.Value = "active"
-	ip_addEdit.Data.Dns_name = "arn-f1.if.lastmile.sk"
+	ip_addEdit.Data.Dns_name = "sk-f1.if.lastmile.sk"
 	// ip_addDel := &nautobot.IPaddress{
 	// 	Event: "deleted",
 	// }
@@ -134,7 +134,7 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 		"test.if.lastmile.sk.":   "172.16.5.3",
 		"ans-m1.if.lastmile.sk.": "172.16.5.90",
 		// "arn-t1.if.lastmile.sk.": "172.16.5.76",
-		"arn-f1.if.lastmile.sk.": "172.16.5.76",
+		"sk-f1.if.lastmile.sk.": "172.16.5.76",
 	}
 
 	for name, i := range ip {
