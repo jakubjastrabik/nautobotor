@@ -62,7 +62,7 @@ func (re *RamRecord) handlePTRAddZone(zone, zzone string, dnsNS map[string]strin
 	// Generate NS record for zone
 	for k, v := range dnsNS {
 		re.newRecord(zone, createRe(v)+" NS "+k+"."+zzone)
-		re.newRecord(zone, k+"."+zzone+" PTR "+createRe(v))
+		re.newRecord(zone, createRe(v)+" PTR "+k+"."+zzone)
 	}
 }
 
@@ -114,6 +114,7 @@ func parsePTRzone(ipFamily int8, ip string) string {
 	if err != nil {
 		log.Debugf("Issue generate ReverseAddr error= %s", err)
 	}
+	dd = dd + "."
 
 	return dd
 }

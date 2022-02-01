@@ -22,7 +22,7 @@ func Test_newNautobotor(t *testing.T) {
 		Event: "created",
 	}
 	ip_add.Data.Family.Value = 4
-	ip_add.Data.Address = "192.168.5.1/24"
+	ip_add.Data.Address = "172.16.5.3/24"
 	ip_add.Data.Status.Value = "active"
 	ip_add.Data.Dns_name = "test.if.lastmile.sk"
 	ip_addEdit := &nautobot.IPaddress{
@@ -131,7 +131,7 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 	}
 
 	ip := map[string]string{
-		"test.if.lastmile.sk.":   "192.168.5.1",
+		"test.if.lastmile.sk.":   "172.16.5.3",
 		"ans-m1.if.lastmile.sk.": "172.16.5.90",
 		// "arn-t1.if.lastmile.sk.":  "172.16.5.76",
 		"arn-f1.if.lastmile.sk.": "172.16.5.76",
@@ -143,7 +143,7 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 
 	reposEqualSOA(t, e, n)
 	reposEqualNS(t, e, n)
-	//reposEqualPTR(t, e, n, "ans-m1.if.lastmile.sk.", "172.16.5.90")
+	reposEqualPTR(t, e, n, "ans-m1.if.lastmile.sk.", "172.16.5.90")
 
 	return true
 }
@@ -239,9 +239,6 @@ func reposEqualPTR(t *testing.T, e, n Nautobotor, name, ip string) bool {
 	r.SetQuestion(a, dns.TypePTR)
 
 	rcode, err := n.ServeDNS(context.Background(), rec, r)
-	t.Log(r)
-	t.Log(rcode)
-
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 		return false
@@ -255,9 +252,9 @@ func reposEqualPTR(t *testing.T, e, n Nautobotor, name, ip string) bool {
 		return false
 	}
 
-	ns := rec.Msg.Answer[0].(*dns.A).A.String()
-	if ns != ip {
-		t.Errorf("Expected %v, got %v", ip, ns)
+	ns := rec.Msg.Answer[0].(*dns.PTR).Ptr
+	if ns != name {
+		t.Errorf("Expected %s, got %s", name, ns)
 		return false
 	}
 

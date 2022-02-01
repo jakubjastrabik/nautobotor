@@ -38,7 +38,10 @@ func (n Nautobotor) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 	zone := plugin.Zones(n.RM.Zones).Matches(qname)
 
 	if zone == "" {
+		// if state.QType() != dns.TypePTR {
+		// if this doesn't match we need to fall through regardless of h.Fallthrough
 		return plugin.NextOrFailure(n.Name(), n.Next, ctx, w, r)
+		// }
 	}
 
 	// New we should have some data for this zone, as we just have a list of RR, iterate through them, find the qname
@@ -143,6 +146,7 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 		// Handle Normal zone
 		n.RM.AddZone(ip.Data.Dns_name, n.NS)
 		// Handle PTR zones
+
 		n.RM.AddPTRZone(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
 
 		// Add record to the zone
