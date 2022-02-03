@@ -140,4 +140,5 @@ func (re *RamRecord) handleRemoveRecord(zone, ptrzone, s string) {
 			return
 		}
 	}
+	log.Debugf("Unable to find record, got %s", rr)
 }
