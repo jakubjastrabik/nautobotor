@@ -8,16 +8,24 @@ import (
 	"github.com/miekg/dns"
 )
 
-// newRecord, generate dns.RR records for each zones, records
-// data will be written to the ramRecord struct
-func (re *RamRecord) newRecord(zone, s string) {
-	log.Debug("handling dns record creation")
-
+// handleCreateNewRR create new rr
+func handleCreateNewRR(zone, s string) dns.RR {
 	rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
 	if err != nil {
 		log.Errorf("error creating new record: err=%s\n", err)
 	}
 	rr.Header().Name = strings.ToLower(rr.Header().Name)
+
+	return rr
+}
+
+// newRecord, generate dns.RR records for each zones, records
+// data will be written to the ramRecord struct
+func (re *RamRecord) newRecord(zone, s string) {
+	log.Debug("handling dns record creation")
+
+	rr := handleCreateNewRR(zone, s)
+
 	re.M[zone] = append(re.M[zone], rr)
 
 	log.Debugf("Create newRecord: zone=%s, record=%s", zone, rr)
@@ -28,11 +36,8 @@ func (re *RamRecord) newRecord(zone, s string) {
 func (re *RamRecord) newPTRRecord(zone, ptrZone, s string) {
 	log.Debug("handling dns record creation")
 
-	rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
-	if err != nil {
-		log.Errorf("error creating new record: err=%s\n", err)
-	}
-	rr.Header().Name = strings.ToLower(rr.Header().Name)
+	rr := handleCreateNewRR(zone, s)
+
 	re.M[ptrZone] = append(re.M[ptrZone], rr)
 
 	log.Debugf("Create newRecord: zone=%s, record=%s", ptrZone, rr)
@@ -120,11 +125,9 @@ func parsePTRzone(ipFamily int8, ip string) string {
 
 // handleRemoveRecord Use to help remove records from the zone
 func (re *RamRecord) handleRemoveRecord(zone, ptrzone, s string) {
-	rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
-	if err != nil {
-		log.Errorf("error creating new record: err=%s\n", err)
-	}
-	rr.Header().Name = strings.ToLower(rr.Header().Name)
+
+	rr := handleCreateNewRR(zone, s)
+
 	if ptrzone != "" {
 		zone = ptrzone
 	}

@@ -133,11 +133,7 @@ func (re *RamRecord) UpdateRecord(ipFamily int8, ip, dnsName string) {
 				s = (strings.Split(dnsNameO, ".")[0] + " AAAA " + cutCIDRMask(ip))
 			}
 
-			rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
-			if err != nil {
-				log.Errorf("error creating new record: err=%s\n", err)
-			}
-			rr.Header().Name = strings.ToLower(rr.Header().Name)
+			rr := handleCreateNewRR(zone, s)
 
 			if dns.IsDuplicate(record, rr) {
 				// If the record is corret => (deleted, create new one) = Update record
