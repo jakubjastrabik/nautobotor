@@ -17,37 +17,16 @@ import (
 )
 
 func Test_newNautobotor(t *testing.T) {
-	// Create Testing Data
-	ip_add := &nautobot.IPaddress{
-		Event: "created",
-	}
-	ip_add.Data.Family.Value = 4
-	ip_add.Data.Address = "172.16.5.3/24"
-	ip_add.Data.Status.Value = "active"
-	ip_add.Data.Dns_name = "test.if.lastmile.sk"
-	ip_addEdit := &nautobot.IPaddress{
-		Event: "updated",
-	}
-	ip_addEdit.Data.Family.Value = 4
-	ip_addEdit.Data.Address = "172.16.5.76/24"
-	ip_addEdit.Data.Status.Value = "active"
-	ip_addEdit.Data.Dns_name = "sk-f1.if.lastmile.sk"
-	// ip_addDel := &nautobot.IPaddress{
-	// 	Event: "deleted",
-	// }
-	// ip_addDel.Data.Family.Value = 4
-	// ip_addDel.Data.Address = "172.16.5.76/24"
-	// ip_addDel.Data.Status.Value = "active"
-	// ip_addDel.Data.Dns_name = "arn-f1.if.lastmile.sk"
 
 	tests := []struct {
 		name    string
 		input   string
 		want    Nautobotor
+		ipAdd   []nautobot.IPaddress
 		wantErr bool
 	}{
 		{
-			name:  "Essential test of predefined records",
+			name:  "Creating Record via webhook",
 			input: "nautobotor {\nwebaddress :9002\n}\n",
 			want: Nautobotor{
 				WebAddress: ":9002",
@@ -55,9 +34,51 @@ func Test_newNautobotor(t *testing.T) {
 					Zones: []string{"if.lastmile.sk."},
 				},
 			},
+			ipAdd: []nautobot.IPaddress{
+				{
+					Event: "created",
+					Data: nautobot.Data{
+						Address:  "172.16.5.3/24",
+						Dns_name: "test.if.lastmile.sk",
+						Family: nautobot.Family{
+							Value: 4,
+						},
+						Status: nautobot.Status{
+							Value: "active",
+						},
+					},
+				},
+				{
+					Event: "updated",
+					Data: nautobot.Data{
+						Address:  "172.16.5.76/24",
+						Dns_name: "sk-f1.if.lastmile.sk.",
+						Family: nautobot.Family{
+							Value: 4,
+						},
+						Status: nautobot.Status{
+							Value: "active",
+						},
+					},
+				},
+				{
+					Event: "deleted",
+					Data: nautobot.Data{
+						Address:  "172.16.5.76/24",
+						Dns_name: "sk-f1.if.lastmile.sk.",
+						Family: nautobot.Family{
+							Value: 4,
+						},
+						Status: nautobot.Status{
+							Value: "active",
+						},
+					},
+				},
+			},
 			wantErr: false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := caddy.NewTestController("dns", tt.input)
@@ -74,41 +95,21 @@ func Test_newNautobotor(t *testing.T) {
 
 			// Test Add records via webhook
 			address := fmt.Sprintf("http://%s%s", tt.want.WebAddress, "/webhook")
-			jsonValue, err := json.Marshal(ip_add)
-			if err != nil {
-				t.Errorf("Nautobotor.Marshal unable correct return json data error = %s", err)
-			}
-			resp, err := http.Post(address, "application/json", bytes.NewBuffer(jsonValue))
-			if err != nil {
-				t.Errorf("Error posting JSON request error = %s", err)
-			}
-			if resp.StatusCode != 200 {
-				t.Errorf("Error posting JSON response error = %s", resp.Status)
-			}
 
-			jsonValue, err = json.Marshal(ip_addEdit)
-			if err != nil {
-				t.Errorf("Nautobotor.Marshal unable correct return json data error = %s", err)
+			// Test webhook manipulation with records
+			for _, i := range tt.ipAdd {
+				jsonValue, err := json.Marshal(i)
+				if err != nil {
+					t.Errorf("Nautobotor.Marshal unable correct return json data error = %s", err)
+				}
+				resp, err := http.Post(address, "application/json", bytes.NewBuffer(jsonValue))
+				if err != nil {
+					t.Errorf("Error posting JSON request error = %s", err)
+				}
+				if resp.StatusCode != 200 {
+					t.Errorf("Error posting JSON response error = %s", resp.Status)
+				}
 			}
-			resp, err = http.Post(address, "application/json", bytes.NewBuffer(jsonValue))
-			if err != nil {
-				t.Errorf("Error posting JSON request error = %s", err)
-			}
-			if resp.StatusCode != 200 {
-				t.Errorf("Error posting JSON response error = %s", resp.Status)
-			}
-
-			// jsonValue, err = json.Marshal(ip_addDel)
-			// if err != nil {
-			// 	t.Errorf("Nautobotor.Marshal unable correct return json data error = %s", err)
-			// }
-			// resp, err = http.Post(address, "application/json", bytes.NewBuffer(jsonValue))
-			// if err != nil {
-			// 	t.Errorf("Error posting JSON request error = %s", err)
-			// }
-			// if resp.StatusCode != 200 {
-			// 	t.Errorf("Error posting JSON response error = %s", resp.Status)
-			// }
 
 			// test DNS response
 			if !reposEqual(t, tt.want, got) {
@@ -130,28 +131,50 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 		}
 	}
 
+	// Some test IP address
 	ip := map[string]string{
 		"test.if.lastmile.sk.":   "172.16.5.3",
 		"ans-m1.if.lastmile.sk.": "172.16.5.90",
+
+		// Uncomment IF update is skipped
 		// "arn-t1.if.lastmile.sk.": "172.16.5.76",
-		"sk-f1.if.lastmile.sk.": "172.16.5.76",
+
+		// Uncomment IF delete is skipped
+		//"sk-f1.if.lastmile.sk.": "172.16.5.76",
 	}
 
-	for name, i := range ip {
-		reposEqualA(t, e, n, name, i)
+	for question, i := range ip {
+		testDNSQuestion(t, n, "A", question, i)
+		testDNSQuestion(t, n, "PTR", question, i)
 	}
 
-	reposEqualSOA(t, e, n)
-	reposEqualNS(t, e, n)
-	reposEqualPTR(t, e, n, "ans-m1.if.lastmile.sk.", "172.16.5.90")
-	reposEqualNSPTR(t, e, n)
+	testDNSQuestion(t, n, "SOA", "if.lastmile.sk.", "ns.if.lastmile.sk.")
+	testDNSQuestion(t, n, "NS", "if.lastmile.sk.", "")
+	testDNSQuestion(t, n, "PTRNS", "5.16.172.in-addr.arpa.", "")
+
 	return true
 }
 
-func reposEqualSOA(t *testing.T, e, n Nautobotor) bool {
+func testDNSQuestion(t *testing.T, n Nautobotor, recordType, question, ip string) bool {
 	rec := dnstest.NewRecorder(&test.ResponseWriter{})
 	r := new(dns.Msg)
-	r.SetQuestion("if.lastmile.sk.", dns.TypeSOA)
+
+	// Set specific stuff for different DNS questions
+	switch recordType {
+	case "A":
+		r.SetQuestion(question, dns.TypeA)
+	case "SOA":
+		r.SetQuestion(question, dns.TypeSOA)
+	case "NS":
+		r.SetQuestion(question, dns.TypeNS)
+	case "PTR":
+		a, _ := dns.ReverseAddr(ip)
+		r.SetQuestion(a, dns.TypePTR)
+	case "PTRNS":
+		r.SetQuestion(question, dns.TypeNS)
+	default:
+		t.Errorf("Wrong dns.Type, got %s", recordType)
+	}
 
 	rcode, err := n.ServeDNS(context.Background(), rec, r)
 	if err != nil {
@@ -163,128 +186,44 @@ func reposEqualSOA(t *testing.T, e, n Nautobotor) bool {
 		return false
 	}
 	if rec.Msg.Answer == nil {
-		t.Errorf("no SOA response from dns query")
-		return false
-	}
-	soa := rec.Msg.Answer[0].(*dns.SOA).Ns
-
-	if soa != "ns.if.lastmile.sk." {
-		t.Errorf("Expected %v, got %v", "ns.if.lastmile.sk.", soa)
+		t.Errorf("No %s response from dns query", recordType)
 		return false
 	}
 
-	return true
-}
-
-func reposEqualNS(t *testing.T, e, n Nautobotor) bool {
-	rec := dnstest.NewRecorder(&test.ResponseWriter{})
-	r := new(dns.Msg)
-	r.SetQuestion("if.lastmile.sk.", dns.TypeNS)
-
-	rcode, err := n.ServeDNS(context.Background(), rec, r)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-		return false
-	}
-	if rcode != 0 {
-		t.Errorf("Expected rcode %v, got %v", 0, rcode)
-		return false
-	}
-	if rec.Msg.Answer == nil {
-		t.Errorf("no NS response from dns query")
-		return false
-	}
-
-	ns := rec.Msg.Answer[0].(*dns.NS).String()
-	if ns != "if.lastmile.sk.	3600	IN	NS	ans-m1.if.lastmile.sk." {
-		t.Errorf("Expected %v, got %v", "if.lastmile.sk.	3600	IN	NS	ans-m1.if.lastmile.sk.", ns)
-		return false
-	}
-
-	return true
-}
-
-func reposEqualA(t *testing.T, e, n Nautobotor, name, ip string) bool {
-	rec := dnstest.NewRecorder(&test.ResponseWriter{})
-	r := new(dns.Msg)
-	r.SetQuestion(name, dns.TypeA)
-
-	rcode, err := n.ServeDNS(context.Background(), rec, r)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-		return false
-	}
-	if rcode != 0 {
-		t.Errorf("Expected rcode %v, got %v", 0, rcode)
-		return false
-	}
-	if rec.Msg.Answer == nil {
-		t.Errorf("no A response from dns query")
-		return false
-	}
-
-	ns := rec.Msg.Answer[0].(*dns.A).A.String()
-	if ns != ip {
-		t.Errorf("Expected %v, got %v", ip, ns)
-		return false
-	}
-
-	return true
-}
-
-func reposEqualPTR(t *testing.T, e, n Nautobotor, name, ip string) bool {
-	rec := dnstest.NewRecorder(&test.ResponseWriter{})
-	r := new(dns.Msg)
-	a, _ := dns.ReverseAddr(ip)
-	r.SetQuestion(a, dns.TypePTR)
-
-	rcode, err := n.ServeDNS(context.Background(), rec, r)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-		return false
-	}
-	if rcode != 0 {
-		t.Errorf("Expected rcode %v, got %v", 0, rcode)
-		return false
-	}
-	if rec.Msg.Answer == nil {
-		t.Errorf("no PTR response from dns query")
-		return false
-	}
-
-	ns := rec.Msg.Answer[0].(*dns.PTR).Ptr
-	if ns != name {
-		t.Errorf("Expected %s, got %s", name, ns)
-		return false
-	}
-
-	return true
-}
-
-func reposEqualNSPTR(t *testing.T, e, n Nautobotor) bool {
-	rec := dnstest.NewRecorder(&test.ResponseWriter{})
-	r := new(dns.Msg)
-
-	r.SetQuestion("5.16.172.in-addr.arpa.", dns.TypeNS)
-
-	rcode, err := n.ServeDNS(context.Background(), rec, r)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-		return false
-	}
-	if rcode != 0 {
-		t.Errorf("Expected rcode %v, got %v", 0, rcode)
-		return false
-	}
-	if rec.Msg.Answer == nil {
-		t.Errorf("no NS response from dns query")
-		return false
-	}
-
-	ns := rec.Msg.Answer[0].(*dns.NS).String()
-	if ns != "5.16.172.in-addr.arpa.	3600	IN	NS	ans-m1.if.lastmile.sk." {
-		t.Errorf("Expected %v, got %v", "5.16.172.in-addr.arpa.	3600	IN	NS	ans-m1.if.lastmile.sk.", ns)
-		return false
+	// Set specific respon parser for different DNS questions
+	switch recordType {
+	case "A":
+		a := rec.Msg.Answer[0].(*dns.A).A.String()
+		if a != ip {
+			t.Errorf("Expected %v, got %v", ip, a)
+			return false
+		}
+	case "SOA":
+		soa := rec.Msg.Answer[0].(*dns.SOA).Ns
+		if soa != ip {
+			t.Errorf("Expected %v, got %v", ip, soa)
+			return false
+		}
+	case "NS":
+		ns := rec.Msg.Answer[0].Header().Name
+		if ns != question {
+			t.Errorf("Expected %v, got %v", question, ns)
+			return false
+		}
+	case "PTR":
+		ptr := rec.Msg.Answer[0].(*dns.PTR).Ptr
+		if ptr != question {
+			t.Errorf("Expected %s, got %s", question, ptr)
+			return false
+		}
+	case "PTRNS":
+		nsptr := rec.Msg.Answer[0].Header().Name
+		if nsptr != question {
+			t.Errorf("Expected %s, got %s", question, nsptr)
+			return false
+		}
+	default:
+		t.Errorf("Wrong dns.Type, got %s", recordType)
 	}
 
 	return true
