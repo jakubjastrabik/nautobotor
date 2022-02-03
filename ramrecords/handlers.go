@@ -8,7 +8,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-// handleCreateNewRR create new rr
+// handleCreateNewRR create new dnsRR
 func handleCreateNewRR(zone, s string) dns.RR {
 	rr, err := dns.NewRR("$ORIGIN " + zone + "\n" + s + "\n")
 	if err != nil {

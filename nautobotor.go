@@ -146,18 +146,18 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 		// Handle Normal zone
 		n.RM.AddZone(ip.Data.Dns_name, n.NS)
 		// Handle PTR zones
-
 		n.RM.AddPTRZone(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
 
 		// Add record to the zone
 		n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
-
 	case "deleted":
 		log.Debug("Received webhook to delet")
+		// Remove record from the zone
 		n.RM.RemoveRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
 	case "updated":
 		log.Debug("Received webhook to update")
-		n.RM.UpdateRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
+		// Update record in the zone
+		n.RM.UpdateRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
 	default:
 		log.Errorf("Unable processed Event: %v", ip.Event)
 	}

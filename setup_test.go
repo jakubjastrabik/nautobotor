@@ -62,6 +62,19 @@ func Test_newNautobotor(t *testing.T) {
 					},
 				},
 				{
+					Event: "updated",
+					Data: nautobot.Data{
+						Address:  "10.0.0.3/24",
+						Dns_name: "pf.test.pf.",
+						Family: nautobot.Family{
+							Value: 4,
+						},
+						Status: nautobot.Status{
+							Value: "active",
+						},
+					},
+				},
+				{
 					Event: "deleted",
 					Data: nautobot.Data{
 						Address:  "172.16.5.76/24",
@@ -135,6 +148,7 @@ func reposEqual(t *testing.T, e, n Nautobotor) bool {
 	ip := map[string]string{
 		"test.if.lastmile.sk.":   "172.16.5.3",
 		"ans-m1.if.lastmile.sk.": "172.16.5.90",
+		"pf.test.pf.":            "10.0.0.3",
 
 		// Uncomment IF update is skipped
 		// "arn-t1.if.lastmile.sk.": "172.16.5.76",

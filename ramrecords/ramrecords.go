@@ -109,7 +109,7 @@ func (re *RamRecord) AddRecord(ipFamily int8, ip, dnsName string) {
 }
 
 // UpdateRecord update a record in the zone
-func (re *RamRecord) UpdateRecord(ipFamily int8, ip, dnsName string) {
+func (re *RamRecord) UpdateRecord(ipFamily int8, ip, dnsName string, ns map[string]string) {
 	log.Debug("updating record from the zone records array")
 
 	// Prepare variables
@@ -148,6 +148,13 @@ func (re *RamRecord) UpdateRecord(ipFamily int8, ip, dnsName string) {
 			return
 		}
 	}
+	// If record isn't in the zone, create it
+	log.Debug("updating faild: record isn't in the zone, create it")
+	// Handle Normal zone
+	re.AddZone(dnsName, ns)
+	// Handle PTR zones
+	re.AddPTRZone(ipFamily, ip, dnsName, ns)
+	re.AddRecord(ipFamily, ip, dnsName)
 }
 
 // TODO: need to handle duplicated FQDN records
