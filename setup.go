@@ -10,7 +10,7 @@ import (
 	"github.com/jakubjastrabik/nautobotor/ramrecords"
 )
 
-var Version = "v0.4.8"
+var Version = "v0.4.9"
 
 // init registers this plugin.
 func init() { plugin.Register("nautobotor", setup) }
