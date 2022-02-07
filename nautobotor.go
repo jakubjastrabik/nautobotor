@@ -118,6 +118,7 @@ func (n *Nautobotor) getApiData() error {
 	}
 
 	// Unmarshal data to strcut
+	log.Debug(nautobot.NewIPaddress(payload))
 	err = n.handleData(nautobot.NewIPaddress(payload))
 	if err != nil {
 		log.Errorf("error handling DNS data: err=%s\n", err)
