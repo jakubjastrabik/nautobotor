@@ -27,7 +27,7 @@ func Test_newNautobotor(t *testing.T) {
 	}{
 		{
 			name:  "Creating Record via webhook",
-			input: "nautobotor {\nwebaddress :9002\n}\n",
+			input: "nautobotor {\nwebaddress :9002\nnautoboturl https://nautobot.tets.sk/api/ipam/ip-addresses\ntoken d3c3313ftestdffffb05\n}\n",
 			want: Nautobotor{
 				WebAddress: ":9002",
 				RM: &ramrecords.RamRecord{
@@ -100,6 +100,10 @@ func Test_newNautobotor(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("newNautobotor() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+
+			if err := got.getApiData(); (err != nil) != tt.wantErr {
+				t.Errorf("Nautobotor.getApiData() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			if err := got.onStartup(); (err != nil) != tt.wantErr {

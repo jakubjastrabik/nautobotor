@@ -44,6 +44,15 @@ func setup(c *caddy.Controller) error {
 	})
 
 	c.OnStartup(func() error {
+		err := nautobotorPlugin.getApiData()
+		if err != nil {
+			log.Errorf("Unable startup web server: err=%s\n", err)
+			return err
+		}
+		return nil
+	})
+
+	c.OnStartup(func() error {
 		err := nautobotorPlugin.onStartup()
 		if err != nil {
 			log.Errorf("Unable startup web server: err=%s\n", err)
@@ -73,7 +82,19 @@ func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
 						log.Error(c.ArgErr())
 					}
 					n.WebAddress = c.Val()
+				case "nautoboturl":
+					if !c.NextArg() {
+						log.Error(c.ArgErr())
+					}
+					n.NautobotURL = c.Val()
+
+				case "token":
+					if !c.NextArg() {
+						log.Error(c.ArgErr())
+					}
+					n.Token = c.Val()
 				}
+
 				if !c.Next() {
 					break
 				}

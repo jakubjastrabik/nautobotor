@@ -18,12 +18,14 @@ import (
 
 // Nautobotor is an nautobotor structure
 type Nautobotor struct {
-	WebAddress string
-	NS         map[string]string
-	RM         *ramrecords.RamRecord
-	ln         net.Listener
-	mux        *http.ServeMux
-	Next       plugin.Handler
+	WebAddress  string
+	NautobotURL string
+	Token       string
+	NS          map[string]string
+	RM          *ramrecords.RamRecord
+	ln          net.Listener
+	mux         *http.ServeMux
+	Next        plugin.Handler
 }
 
 // Define log to be a logger with the plugin name in it. This way we can just use log.Info and
@@ -94,7 +96,40 @@ func (n Nautobotor) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.M
 
 }
 
-// TODO: Add comment
+// getApiData send get request to nautobot
+// return data
+func (n *Nautobotor) getApiData() error {
+
+	req, err := http.NewRequest("GET", n.NautobotURL, nil)
+	if err != nil {
+		log.Error(err)
+	}
+	req.Header.Add("Authorization", n.Token)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Errorf("Error on response err=%s\n", err)
+	}
+	defer resp.Body.Close()
+
+	payload, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Errorf("Error while reading the response bytes err=%s\n", err)
+	}
+
+	// Unmarshal data to strcut
+	err = n.handleData(nautobot.NewIPaddress(payload))
+	if err != nil {
+		log.Errorf("error handling DNS data: err=%s\n", err)
+	}
+
+	return nil
+
+}
+
+// onStartup handling web request and response
+// used for reciving webhook
+// used for sending GET to nautobot API, to get all IP addresses
 func (n *Nautobotor) onStartup() error {
 	ln, err := reuseport.Listen("tcp", n.WebAddress)
 	if err != nil {
