@@ -104,7 +104,7 @@ func (n *Nautobotor) getApiData() error {
 	if err != nil {
 		log.Error(err)
 	}
-	req.Header.Add("x-auth-token", n.Token)
+	req.Header.Add("X-Auth-Token", n.Token)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
