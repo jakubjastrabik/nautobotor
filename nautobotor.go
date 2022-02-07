@@ -103,25 +103,29 @@ func (n *Nautobotor) getApiData() error {
 	req, err := http.NewRequest("GET", n.NautobotURL, nil)
 	if err != nil {
 		log.Error(err)
+		return err
 	}
 	req.Header.Set("Authorization", "Token "+n.Token)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Errorf("Error on response err=%s\n", err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	payload, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Errorf("Error while reading the response bytes err=%s\n", err)
+		return err
 	}
 
 	// Unmarshal data to strcut
-	log.Debug(nautobot.NewIPaddress(payload))
-	err = n.handleData(nautobot.NewIPaddress(payload))
+	log.Debug(nautobot.NewAPIaddress(payload))
+	err = n.handleAPIData(nautobot.NewAPIaddress(payload))
 	if err != nil {
 		log.Errorf("error handling DNS data: err=%s\n", err)
+		return err
 	}
 
 	return nil
@@ -165,6 +169,34 @@ func (n *Nautobotor) onStartup() error {
 			log.Errorf("errro initializing web server: err=%s\n", err)
 		}
 	}()
+
+	return nil
+}
+
+// handleData are used to handle incoming data structures
+// returning pointers to nautobot DNS records structures
+func (n *Nautobotor) handleAPIData(ip *nautobot.APIIPaddress) error {
+	log.Debug("Start handling DNS record")
+	log.Debug("Unmarshaled data from webhook to be add to DNS: data=", ip)
+
+	switch ip.Event {
+
+	case "created":
+		log.Debug("Received API data to creat")
+		for _, i := range ip.Results {
+			// 	// Handle Normal zone
+			n.RM.AddZone(i.Dns_name, n.NS)
+			// Handle PTR zones
+			n.RM.AddPTRZone(i.Family.Value, i.Address, i.Dns_name, n.NS)
+			// Handle PTR zones
+			n.RM.AddPTRZone(i.Family.Value, i.Address, i.Dns_name, n.NS)
+
+			// Add record to the zone
+			n.RM.AddRecord(i.Family.Value, i.Address, i.Dns_name)
+		}
+	default:
+		log.Errorf("Unable processed Event: %v", ip.Event)
+	}
 
 	return nil
 }

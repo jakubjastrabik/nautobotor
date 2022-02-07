@@ -27,7 +27,7 @@ func Test_newNautobotor(t *testing.T) {
 	}{
 		{
 			name:  "Creating Record via webhook",
-			input: "nautobotor {\nwebaddress :9002\nnautoboturl https://nautobot.tets.sk/api/ipam/ip-addresses\ntoken d3c3313ftestdffffb05\n}\n",
+			input: "nautobotor {\nwebaddress :9002\nnautoboturl  http://geriatrix.if.lastmile.sk/api/ipam/ip-addresses \ntoken d4c7513f5ab6a3d42a11ed579bd7cc16acdd4b05\n}\n",
 			want: Nautobotor{
 				WebAddress: ":9002",
 				RM: &ramrecords.RamRecord{
