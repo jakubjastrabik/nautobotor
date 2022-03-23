@@ -6,7 +6,7 @@ import (
 )
 
 type Family struct {
-	Value int8 `json:"value"`
+	Label string `json:"label"`
 }
 
 type Status struct {

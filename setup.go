@@ -7,10 +7,10 @@ import (
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/metrics"
-	"github.com/jakubjastrabik/nautobotor/ramrecords"
+	"github.com/coredns/coredns/plugin/transfer"
 )
 
-var Version = "v0.5.7"
+var Version = "v0.6.0"
 
 // init registers this plugin.
 func init() { plugin.Register("nautobotor", setup) }
@@ -43,6 +43,35 @@ func setup(c *caddy.Controller) error {
 		return nil
 	})
 
+	// Start handle zone transfer
+	c.OnStartup(func() error {
+		t := dnsserver.GetConfig(c).Handler("transfer")
+		if t == nil {
+			return nil
+		}
+		nautobotorPlugin.transfer = t.(*transfer.Transfer) // if found this must be OK.
+		go func() {
+			for _, n := range nautobotorPlugin.Zones.Names {
+				nautobotorPlugin.transfer.Notify(n)
+			}
+		}()
+		return nil
+	})
+
+	c.OnRestartFailed(func() error {
+		t := dnsserver.GetConfig(c).Handler("transfer")
+		if t == nil {
+			return nil
+		}
+		go func() {
+			for _, n := range nautobotorPlugin.Zones.Names {
+				nautobotorPlugin.transfer.Notify(n)
+			}
+		}()
+		return nil
+	})
+
+	// Download all zone data from nautobotor API
 	c.OnStartup(func() error {
 		err := nautobotorPlugin.getApiData()
 		if err != nil {
@@ -52,6 +81,7 @@ func setup(c *caddy.Controller) error {
 		return nil
 	})
 
+	// Listen for webhook update from nautobot
 	c.OnStartup(func() error {
 		err := nautobotorPlugin.onStartup()
 		if err != nil {
@@ -63,6 +93,7 @@ func setup(c *caddy.Controller) error {
 
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
+		nautobotorPlugin.Next = next
 		return nautobotorPlugin
 	})
 
@@ -73,6 +104,7 @@ func setup(c *caddy.Controller) error {
 func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
 	var n = Nautobotor{}
 
+	//	Parse the input data
 	for c.Next() {
 		if c.NextBlock() {
 			for {
@@ -101,16 +133,16 @@ func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
 			}
 		}
 	}
-	if n.WebAddress == "" {
-		return Nautobotor{}, errors.New("Could not parse config")
+	if n.WebAddress == "" || n.NautobotURL == "" || n.Token == "" {
+		return Nautobotor{}, errors.New("Could not parse config, or some input data are missing")
 	}
 
 	// Init RamRecord
-	var err error
-	n.RM, err = ramrecords.InitRamRecords()
-	if err != nil {
-		log.Error(err)
-	}
+	// var err error
+	// n.RM, err = ramrecords.InitRamRecords()
+	// if err != nil {
+	// 	log.Error(err)
+	// }
 
 	n.NS = map[string]string{
 		"ans-m1": "172.16.5.90/24",

@@ -7,12 +7,11 @@ import (
 	"net/http"
 
 	"github.com/coredns/coredns/plugin"
-	"github.com/coredns/coredns/plugin/metrics"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/plugin/pkg/reuseport"
+	"github.com/coredns/coredns/plugin/transfer"
 	"github.com/coredns/coredns/request"
 	"github.com/jakubjastrabik/nautobotor/nautobot"
-	"github.com/jakubjastrabik/nautobotor/ramrecords"
 	"github.com/miekg/dns"
 )
 
@@ -22,10 +21,19 @@ type Nautobotor struct {
 	NautobotURL string
 	Token       string
 	NS          map[string]string
-	RM          *ramrecords.RamRecord
-	ln          net.Listener
-	mux         *http.ServeMux
-	Next        plugin.Handler
+
+	Zones
+	transfer *transfer.Transfer
+
+	ln   net.Listener
+	mux  *http.ServeMux
+	Next plugin.Handler
+}
+
+// Zones maps zone names to a *Zone.
+type Zones struct {
+	Z     map[string]*Zone // A map mapping zone (origin) to the Zone's data
+	Names []string         // All the keys from the map Z as a string slice
 }
 
 // Define log to be a logger with the plugin name in it. This way we can just use log.Info and
@@ -37,66 +45,85 @@ var log = clog.NewWithPlugin("nautobotor")
 func (n Nautobotor) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 	qname := state.Name()
-	zone := plugin.Zones(n.RM.Zones).Matches(qname)
+	zone := plugin.Zones(n.Zones.Names).Matches(qname)
 
 	if zone == "" {
-		// if state.QType() != dns.TypePTR {
-		// if this doesn't match we need to fall through regardless of h.Fallthrough
 		return plugin.NextOrFailure(n.Name(), n.Next, ctx, w, r)
-		// }
 	}
 
-	// New we should have some data for this zone, as we just have a list of RR, iterate through them, find the qname
-	// and see if the qtype exists. If so reply, if not do the normal DNS thing and return either A or AAAA.
-	m := new(dns.Msg)
-	m.SetReply(r)
-	m.Authoritative = true
+	z, ok := n.Zones.Z[zone]
+	if !ok || z == nil {
+		return dns.RcodeServerFailure, nil
+	}
 
-	nxdomain := true
-	var soa dns.RR
-	for _, r := range n.RM.M[zone] {
-		if r.Header().Rrtype == dns.TypeSOA && soa == nil {
-			soa = r
-		}
-		if r.Header().Name == qname {
-			nxdomain = false
-			if r.Header().Rrtype == state.QType() {
-				m.Answer = append(m.Answer, r)
+	// If transfer is not loaded, we'll see these, answer with refused (no transfer allowed).
+	if state.QType() == dns.TypeAXFR || state.QType() == dns.TypeIXFR {
+		return dns.RcodeRefused, nil
+	}
+
+	// This is only for when we are a secondary zones.
+	if r.Opcode == dns.OpcodeNotify {
+		if z.isNotify(state) {
+			m := new(dns.Msg)
+			m.SetReply(r)
+			m.Authoritative = true
+			w.WriteMsg(m)
+
+			log.Infof("Notify from %s for %s: checking transfer", state.IP(), zone)
+			ok, err := z.shouldTransfer()
+			if ok {
+				z.TransferIn()
+			} else {
+				log.Infof("Notify from %s for %s: no SOA serial increase seen", state.IP(), zone)
 			}
+			if err != nil {
+				log.Warningf("Notify from %s for %s: failed primary check: %s", state.IP(), zone, err)
+			}
+			return dns.RcodeSuccess, nil
 		}
-	}
-
-	// handle nxdomain, NODATA and normal response here.
-	if nxdomain {
-		m.Rcode = dns.RcodeNameError
-		if soa != nil {
-			m.Ns = []dns.RR{soa}
-		}
-		err := w.WriteMsg(m)
-		if err != nil {
-			log.Error(err)
-		}
+		log.Infof("Dropping notify from %s for %s", state.IP(), zone)
 		return dns.RcodeSuccess, nil
 	}
 
-	if len(m.Answer) == 0 {
-		if soa != nil {
-			m.Ns = []dns.RR{soa}
+	z.RLock()
+	exp := z.Expired
+	z.RUnlock()
+	if exp {
+		log.Errorf("Zone %s is expired", zone)
+		return dns.RcodeServerFailure, nil
+	}
+
+	answer, ns, extra, result := z.Lookup(ctx, state, qname)
+
+	m := new(dns.Msg)
+	m.SetReply(r)
+	m.Authoritative = true
+	m.Answer, m.Ns, m.Extra = answer, ns, extra
+
+	switch result {
+	case Success:
+	case NoData:
+	case NameError:
+		m.Rcode = dns.RcodeNameError
+	case Delegation:
+		m.Authoritative = false
+	case ServerFailure:
+		// If the result is SERVFAIL and the answer is non-empty, then the SERVFAIL came from an
+		// external CNAME lookup and the answer contains the CNAME with no target record. We should
+		// write the CNAME record to the client instead of sending an empty SERVFAIL response.
+		if len(m.Answer) == 0 {
+			return dns.RcodeServerFailure, nil
 		}
+		//  The rcode in the response should be the rcode received from the target lookup. RFC 6604 section 3
+		m.Rcode = dns.RcodeServerFailure
 	}
 
-	// Export metric with the server label set to the current server handling the request.
-	requestCount.WithLabelValues(metrics.WithServer(ctx)).Inc()
-
-	err := w.WriteMsg(m)
-	if err != nil {
-		log.Error(err)
-	}
+	w.WriteMsg(m)
 	return dns.RcodeSuccess, nil
 
 }
 
-// getApiData send get request to nautobot
+// getApiData send api GET request to nautobot
 // return data
 func (n *Nautobotor) getApiData() error {
 
@@ -184,15 +211,22 @@ func (n *Nautobotor) handleAPIData(ip *nautobot.APIIPaddress) error {
 	case "created":
 		log.Debug("Received API data to creat")
 		for _, i := range ip.Results {
-			// 	// Handle Normal zone
-			n.RM.AddZone(i.Dns_name, n.NS)
-			// Handle PTR zones
-			n.RM.AddPTRZone(i.Family.Value, i.Address, i.Dns_name, n.NS)
-			// Handle PTR zones
-			n.RM.AddPTRZone(i.Family.Value, i.Address, i.Dns_name, n.NS)
+			dnsName := parseZone(i.Dns_name)
 
-			// Add record to the zone
-			n.RM.AddRecord(i.Family.Value, i.Address, i.Dns_name)
+			// Handle Normal zone
+			if err := n.Zones.AddZone(dnsName); err != nil {
+				log.Errorf("handleApiData() Error creating zone: %s, err=%s\n", dnsName, err)
+			}
+
+			if err := n.Zones.Z[dnsName].Insert(handleCreateNewRR(dnsName, createRRString(i.Family.Label, i.Dns_name, i.Address))); err != nil {
+				log.Errorf("handleApiData() Unable add record to the zone: %s error = %s\n", err, dnsName)
+			}
+
+			// 	// // Handle PTR zones
+			// 	// n.RM.AddPTRZone(i.Family.Value, i.Address, i.Dns_name, n.NS)
+
+			// 	// // Add record to the zone
+			// 	// n.RM.AddRecord(i.Family.Value, i.Address, i.Dns_name)
 		}
 	default:
 		log.Errorf("Unable processed Event: %v", ip.Event)
@@ -207,25 +241,36 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 	log.Debug("Start handling DNS record")
 	log.Debug("Unmarshaled data from webhook to be add to DNS: data=", ip)
 
+	dnsName := parseZone(ip.Data.Dns_name)
+
 	switch ip.Event {
 	case "created":
 		log.Debug("Received webhook to creat")
 
 		// Handle Normal zone
-		n.RM.AddZone(ip.Data.Dns_name, n.NS)
-		// Handle PTR zones
-		n.RM.AddPTRZone(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
+		if err := n.Zones.AddZone(dnsName); err != nil {
+			log.Errorf("handleData() Error creating zone: %s, err=%s\n", dnsName, err)
+		}
+
+		// 	// Handle PTR zones
+		// 	n.RM.AddPTRZone(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
 
 		// Add record to the zone
-		n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
-	case "deleted":
-		log.Debug("Received webhook to delet")
-		// Remove record from the zone
-		n.RM.RemoveRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
-	case "updated":
-		log.Debug("Received webhook to update")
-		// Update record in the zone
-		n.RM.UpdateRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
+		if err := n.Zones.Z[dnsName].Insert(handleCreateNewRR(dnsName, createRRString(ip.Data.Family.Label, ip.Data.Dns_name, ip.Data.Address))); err != nil {
+			log.Errorf("handleData() Unable add record to the zone: %s error = %s\n", err, dnsName)
+		}
+
+	// 	n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
+
+	// case "deleted":
+	// 	log.Debug("Received webhook to delet")
+	// 	// Remove record from the zone
+	// 	n.RM.RemoveRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
+
+	// case "updated":
+	// 	log.Debug("Received webhook to update")
+	// 	// Update record in the zone
+	// 	n.RM.UpdateRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
 	default:
 		log.Errorf("Unable processed Event: %v", ip.Event)
 	}
