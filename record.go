@@ -3,6 +3,7 @@ package nautobotor
 import (
 	"net"
 	"strings"
+	"time"
 
 	"github.com/miekg/dns"
 )
@@ -37,6 +38,10 @@ func createRRString(t, fqdn, ip string) string {
 		return strings.Split(fqdn, ".")[0] + " A " + cutCIDRMask(ip)
 	case "IPv6":
 		return strings.Split(fqdn, ".")[0] + " AAAA " + cutCIDRMask(ip)
+	case "NS":
+		return "@ NS " + strings.Split(fqdn, ".")[0]
+	case "SOA":
+		return "@ SOA " + fqdn + " noc-srv " + time.Now().Format("2006010215") + " 7200 3600 1209600 3600"
 	default:
 		log.Errorf("createRRString() Undefined option in rr record string: %s", t)
 		return ""

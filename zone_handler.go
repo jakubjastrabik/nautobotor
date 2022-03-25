@@ -20,6 +20,11 @@ func (z *Zones) AddZone(name string) error {
 		z.Z[name] = NewZone(name)
 		z.Z[name].Upstream = upstream.New()
 
+		// insert soa to the zone
+		if err := z.Z[name].Insert(handleCreateNewRR(name, createRRString("SOA", "ns", ""))); err != nil {
+			log.Errorf("AddZone() Unable create SOA record, error = %s\n", err)
+		}
+
 		// Adding zone metadata to the list of Zones
 		z.Names = append(z.Names, name)
 	}

@@ -218,6 +218,14 @@ func (n *Nautobotor) handleAPIData(ip *nautobot.APIIPaddress) error {
 				log.Errorf("handleApiData() Error creating zone: %s, err=%s\n", dnsName, err)
 			}
 
+			// Handle Add zone NS record
+			for v := range n.NS {
+				if err := n.Zones.Z[dnsName].Insert(handleCreateNewRR(dnsName, createRRString("NS", v, ""))); err != nil {
+					log.Errorf("handleApiData() Unable add NS record to the zone: %s error = %s\n", err, dnsName)
+				}
+			}
+
+			// Handel Add zone records
 			if err := n.Zones.Z[dnsName].Insert(handleCreateNewRR(dnsName, createRRString(i.Family.Label, i.Dns_name, i.Address))); err != nil {
 				log.Errorf("handleApiData() Unable add record to the zone: %s error = %s\n", err, dnsName)
 			}

@@ -3,6 +3,7 @@ package nautobotor
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/coredns/coredns/plugin/test"
 	"github.com/miekg/dns"
@@ -33,6 +34,22 @@ func Test_handleCreateNewRR(t *testing.T) {
 				s:    "google AAAA 2a00:1450:4014:80e::200e",
 			},
 			want: test.AAAA("google.com. 3600	IN	AAAA 2a00:1450:4014:80e::200e"),
+		},
+		{
+			name: "Test NS record",
+			args: args{
+				zone: "example.org.",
+				s:    "@ NS ns1",
+			},
+			want: test.NS("example.org.	3600	IN	NS	ns1.example.org."),
+		},
+		{
+			name: "Test SOA record",
+			args: args{
+				zone: "example.org.",
+				s:    "@ SOA ns noc-srv " + time.Now().Format("2006010215") + " 7200 3600 1209600 3600",
+			},
+			want: test.SOA("example.org.	3600	IN	SOA	ns.example.org. noc-srv.example.org. 2022032515 7200 3600 1209600 3600"),
 		},
 	}
 	for _, tt := range tests {
@@ -98,6 +115,24 @@ func Test_createRRString(t *testing.T) {
 				ip:   "2a00:1450:4014:80e::200e/32",
 			},
 			want: "google AAAA 2a00:1450:4014:80e::200e",
+		},
+		{
+			name: "Test NS",
+			args: args{
+				t:    "NS",
+				fqdn: "ns1",
+				ip:   "",
+			},
+			want: "@ NS ns1",
+		},
+		{
+			name: "Test SOA",
+			args: args{
+				t:    "SOA",
+				fqdn: "ns",
+				ip:   "",
+			},
+			want: "@ SOA ns noc-srv " + time.Now().Format("2006010215") + " 7200 3600 1209600 3600",
 		},
 	}
 	for _, tt := range tests {
