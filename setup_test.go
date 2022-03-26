@@ -66,7 +66,6 @@ func Test_newNautobotor(t *testing.T) {
 		{"SOA", "example.org.", "test.example.org."},
 		{"A", "bat.test.org.", "173.16.10.24"},
 		{"A", "bat.test.org.", "173.16.10.24"},
-		{"A", "skbasixhv1.if.lastmile.sk.", "172.16.5.5"},
 		{"A", "bat.example.org.", "173.16.5.24"},
 		{"NS", "example.org.", ""},
 		{"NS", "test.org.", ""},

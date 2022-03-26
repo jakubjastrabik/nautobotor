@@ -260,13 +260,20 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 			log.Errorf("handleData() Error creating zone: %s, err=%s\n", dnsName, err)
 		}
 
-		// 	// Handle PTR zones
-		// 	n.RM.AddPTRZone(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
+		// Handle Add zone NS record
+		for v := range n.NS {
+			if err := n.Zones.Z[dnsName].Insert(handleCreateNewRR(dnsName, createRRString("NS", v, ""))); err != nil {
+				log.Errorf("handleApiData() Unable add NS record to the zone: %s error = %s\n", err, dnsName)
+			}
+		}
 
 		// Add record to the zone
 		if err := n.Zones.Z[dnsName].Insert(handleCreateNewRR(dnsName, createRRString(ip.Data.Family.Label, ip.Data.Dns_name, ip.Data.Address))); err != nil {
 			log.Errorf("handleData() Unable add record to the zone: %s error = %s\n", err, dnsName)
 		}
+
+		// 	// Handle PTR zones
+		// 	n.RM.AddPTRZone(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
 
 	// 	n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
 
