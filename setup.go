@@ -137,13 +137,6 @@ func newNautobotor(c *caddy.Controller) (Nautobotor, error) {
 		return Nautobotor{}, errors.New("Could not parse config, or some input data are missing")
 	}
 
-	// Init RamRecord
-	// var err error
-	// n.RM, err = ramrecords.InitRamRecords()
-	// if err != nil {
-	// 	log.Error(err)
-	// }
-
 	n.NS = map[string]string{
 		"ans-m1": "172.16.5.90/24",
 		"arn-t1": "172.16.5.76/24",

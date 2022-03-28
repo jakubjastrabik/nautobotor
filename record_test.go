@@ -47,9 +47,9 @@ func Test_handleCreateNewRR(t *testing.T) {
 			name: "Test SOA record",
 			args: args{
 				zone: "example.org.",
-				s:    "@ SOA ns noc-srv " + time.Now().Format("2006010215") + " 7200 3600 1209600 3600",
+				s:    "@ SOA ns dns-admin " + time.Now().Format("2006010215") + " 7200 3600 1209600 3600",
 			},
-			want: test.SOA("example.org.	3600	IN	SOA	ns.example.org. noc-srv.example.org. 2022032515 7200 3600 1209600 3600"),
+			want: test.SOA("example.org.	3600	IN	SOA	ns.example.org. dns-admin.example.org. 2022032515 7200 3600 1209600 3600"),
 		},
 	}
 	for _, tt := range tests {
@@ -132,7 +132,7 @@ func Test_createRRString(t *testing.T) {
 				fqdn: "ns",
 				ip:   "",
 			},
-			want: "@ SOA ns noc-srv " + time.Now().Format("2006010215") + " 7200 3600 1209600 3600",
+			want: "@ SOA ns dns-admin " + time.Now().Format("2006010215") + " 7200 3600 1209600 3600",
 		},
 	}
 	for _, tt := range tests {

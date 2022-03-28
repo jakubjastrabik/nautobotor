@@ -275,6 +275,9 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 
 	dnsName := parseZone(ip.Data.Dns_name)
 
+	// Handle Parse PTR zone
+	ptrZone := parsePTRzone(ip.Data.Family.Label, ip.Data.Address)
+
 	switch ip.Event {
 	case "created":
 		log.Debug("Received webhook to creat")
@@ -297,9 +300,6 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 		if err := n.Zones.Z[dnsName].Insert(handleCreateNewRR(dnsName, createRRString(ip.Data.Family.Label, ip.Data.Dns_name, ip.Data.Address))); err != nil {
 			log.Errorf("handleData() Unable add record to the zone: %s error = %s\n", err, dnsName)
 		}
-
-		// Handle Add PTR zone
-		ptrZone := parsePTRzone(ip.Data.Family.Label, ip.Data.Address)
 
 		// Handle PTR zone
 		if err := n.Zones.AddZone(ptrZone, dnsName); err != nil {
@@ -324,15 +324,23 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 			log.Errorf("handleApiData() Unable add NS record to the zone: %s error = %s\n", err, dnsName)
 		}
 
-	// case "deleted":
-	// 	log.Debug("Received webhook to delet")
-	// 	// Remove record from the zone
-	// 	n.RM.RemoveRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
+	case "deleted":
+		log.Debug("Received webhook to delet")
+
+		// Remove record from the zone
+		if err := n.Zones.Z[dnsName].Remove(handleCreateNewRR(dnsName, createRRString(ip.Data.Family.Label, ip.Data.Dns_name, ip.Data.Address))); err != nil {
+			log.Errorf("handleData() Unable remove record to the zone: %s error = %s\n", err, dnsName)
+		}
+
+		// Remove PTR record
+		if err := n.Zones.Z[ptrZone].Remove(handleCreateNewRR(ip.Data.Dns_name, createRRString("PTR", ip.Data.Dns_name+".", ip.Data.Address))); err != nil {
+			log.Errorf("handleApiData() Unable remove NS record to the zone: %s error = %s\n", err, dnsName)
+		}
 
 	// case "updated":
 	// 	log.Debug("Received webhook to update")
 	// 	// Update record in the zone
-	// 	n.RM.UpdateRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
+	// // 	n.RM.UpdateRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
 	default:
 		log.Errorf("Unable processed Event: %v", ip.Event)
 	}

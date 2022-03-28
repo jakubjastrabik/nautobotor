@@ -56,6 +56,18 @@ func Test_newNautobotor(t *testing.T) {
 			},
 		},
 	}
+	testsDel := []struct {
+		zoneName string
+		rr       []dns.RR
+	}{
+		{
+			zoneName: "example.org.",
+			rr:       []dns.RR{
+				// test.A("bar.example.org. 3600	IN	A 173.16.5.22"),
+				// test.A("bat.example.org. 3600	IN	A 173.16.5.24"),
+			},
+		},
+	}
 
 	testsResp := []struct {
 		proto  string
@@ -65,8 +77,10 @@ func Test_newNautobotor(t *testing.T) {
 		{"SOA", "test.org.", "test.test.org."},
 		{"SOA", "example.org.", "test.example.org."},
 		{"A", "bat.test.org.", "173.16.10.24"},
-		{"A", "bat.test.org.", "173.16.10.24"},
+
 		{"A", "bat.example.org.", "173.16.5.24"},
+		{"A", "bar.example.org.", "173.16.5.22"},
+
 		{"PTRNS", "5.16.172.in-addr.arpa.", ""},
 		{"PTR", "ans-m1.if.lastmile.sk.", "172.16.5.90"},
 		{"PTR", "skbasixhv3.if.lastmile.sk.", "172.16.5.11"},
@@ -83,10 +97,17 @@ func Test_newNautobotor(t *testing.T) {
 		}
 	}
 
+	for i := range testsDel {
+		for _, r := range testsDel[i].rr {
+			got.Zones.Z[testsDel[i].zoneName].Remove(r)
+		}
+	}
+
 	// Test DNS record via lookup
 	for _, tr := range testsResp {
 		testDNSQuestion(t, got, tr.proto, tr.domain, tr.record)
 	}
+
 }
 
 // func Test_webHook(t *testing.T) {
@@ -103,57 +124,54 @@ func Test_newNautobotor(t *testing.T) {
 // 			input: "nautobotor {\nwebaddress :9002\nnautoboturl  http://geriatrix.if.lastmile.sk/api/ipam/ip-addresses \ntoken d4c7513f5ab6a3d42a11ed579bd7cc16acdd4b05\n}\n",
 // 			want: Nautobotor{
 // 				WebAddress: ":9002",
-// 				RM: &ramrecords.RamRecord{
-// 					Zones: []string{"if.lastmile.sk."},
-// 				},
 // 			},
 // 			ipAdd: []nautobot.IPaddress{
 // 				{
 // 					Event: "created",
 // 					Data: nautobot.Data{
-// 						Address:  "172.16.5.3/24",
-// 						Dns_name: "test.if.lastmile.sk",
+// 						Address:  "10.1.1.4/24",
+// 						Dns_name: "test.cc.example.org",
 // 						Family: nautobot.Family{
-// 							Value: 4,
+// 							Label: "IPv4",
 // 						},
 // 						Status: nautobot.Status{
 // 							Value: "active",
 // 						},
 // 					},
 // 				},
-// 				{
-// 					Event: "updated",
-// 					Data: nautobot.Data{
-// 						Address:  "172.16.5.76/24",
-// 						Dns_name: "sk-f1.if.lastmile.sk.",
-// 						Family: nautobot.Family{
-// 							Value: 4,
-// 						},
-// 						Status: nautobot.Status{
-// 							Value: "active",
-// 						},
-// 					},
-// 				},
-// 				{
-// 					Event: "updated",
-// 					Data: nautobot.Data{
-// 						Address:  "10.0.0.3/24",
-// 						Dns_name: "pf.test.pf.",
-// 						Family: nautobot.Family{
-// 							Value: 4,
-// 						},
-// 						Status: nautobot.Status{
-// 							Value: "active",
-// 						},
-// 					},
-// 				},
+// 				// {
+// 				// 	Event: "updated",
+// 				// 	Data: nautobot.Data{
+// 				// 		Address:  "10.5.1.4/24",
+// 				// 		Dns_name: "sk-f1.cc.example.org",
+// 				// 		Family: nautobot.Family{
+// 				// 			Label: "IPv4",
+// 				// 		},
+// 				// 		Status: nautobot.Status{
+// 				// 			Value: "active",
+// 				// 		},
+// 				// 	},
+// 				// },
+// 				// {
+// 				// 	Event: "updated",
+// 				// 	Data: nautobot.Data{
+// 				// 		Address:  "10.0.0.3/24",
+// 				// 		Dns_name: "pf.test.pf",
+// 				// 		Family: nautobot.Family{
+// 				// 			Label: "IPv4",
+// 				// 		},
+// 				// 		Status: nautobot.Status{
+// 				// 			Value: "active",
+// 				// 		},
+// 				// 	},
+// 				// },
 // 				{
 // 					Event: "deleted",
 // 					Data: nautobot.Data{
-// 						Address:  "172.16.5.76/24",
-// 						Dns_name: "sk-f1.if.lastmile.sk.",
+// 						Address:  "10.1.1.4/24",
+// 						Dns_name: "test.cc.example.org",
 // 						Family: nautobot.Family{
-// 							Value: 4,
+// 							Label: "IPv4",
 // 						},
 // 						Status: nautobot.Status{
 // 							Value: "active",
@@ -201,10 +219,10 @@ func Test_newNautobotor(t *testing.T) {
 // 				}
 // 			}
 
-// 			// // test DNS response
-// 			// if !reposEqual(t, tt.want, got) {
-// 			// 	t.Errorf("newNautobotor() = %v, want %v", got, tt.want)
-// 			// }
+// 			// test DNS response
+// 			if !reposEqual(t, tt.want, got) {
+// 				t.Errorf("newNautobotor() = %v, want %v", got, tt.want)
+// 			}
 // 		})
 // 	}
 // }
@@ -214,24 +232,17 @@ func Test_newNautobotor(t *testing.T) {
 // 		t.Errorf("webaddress is different. Expected %v, got %v", e, n)
 // 		return false
 // 	}
-// 	for i, r := range e.RM.Zones {
-// 		if r != n.RM.Zones[i] {
-// 			t.Errorf("zone is different. Expected %v, got %v", r, n.RM.Zones[i])
-// 			return false
-// 		}
-// 	}
 
 // 	// Some test IP address
 // 	ip := map[string]string{
-// 		"test.if.lastmile.sk.":   "172.16.5.3",
-// 		"ans-m1.if.lastmile.sk.": "172.16.5.90",
-// 		"pf.test.pf.":            "10.0.0.3",
+// 		// "test.cc.example.org.": "10.1.1.4",
+// 		// "pf.test.pf.":            "10.0.0.3",
 
 // 		// Uncomment IF update is skipped
-// 		// "arn-t1.if.lastmile.sk.": "172.16.5.76",
+// 		// "arn-t1.if.lastmile.sk.": "10.5.1.4",
 
 // 		// Uncomment IF delete is skipped
-// 		//"sk-f1.if.lastmile.sk.": "172.16.5.76",
+// 		//"sk-f1.if.lastmile.sk.": "10.5.1.4",
 // 	}
 
 // 	for question, i := range ip {

@@ -121,6 +121,25 @@ func (z *Zone) Insert(r dns.RR) error {
 	return nil
 }
 
+// Remove r from z.
+func (z *Zone) Remove(r dns.RR) error {
+	r.Header().Name = strings.ToLower(r.Header().Name)
+
+	switch h := r.Header().Rrtype; h {
+	case dns.TypePTR:
+		r.(*dns.PTR).Ptr = strings.ToLower(r.(*dns.PTR).Ptr)
+	case dns.TypeCNAME:
+		r.(*dns.CNAME).Target = strings.ToLower(r.(*dns.CNAME).Target)
+	case dns.TypeMX:
+		r.(*dns.MX).Mx = strings.ToLower(r.(*dns.MX).Mx)
+	case dns.TypeSRV:
+		r.(*dns.SRV).Target = strings.ToLower(r.(*dns.SRV).Target)
+	}
+
+	z.Tree.Delete(r)
+	return nil
+}
+
 // NameFromRight returns the labels from the right, staring with the
 // origin and then i labels extra. When we are overshooting the name
 // the returned boolean is set to true.
