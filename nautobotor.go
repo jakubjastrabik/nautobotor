@@ -200,6 +200,7 @@ func (n *Nautobotor) onStartup() error {
 	return nil
 }
 
+// TODO(jakub): Refactoring!
 // handleData are used to handle incoming data structures
 // returning pointers to nautobot DNS records structures
 func (n *Nautobotor) handleAPIData(ip *nautobot.APIIPaddress) error {
@@ -283,10 +284,12 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 			log.Errorf("handleData() Error creating zone: %s, err=%s\n", dnsName, err)
 		}
 
-		// Handle Add zone NS record
-		for v := range n.NS {
-			if err := n.Zones.Z[dnsName].Insert(handleCreateNewRR(dnsName, createRRString("NS", v, ""))); err != nil {
-				log.Errorf("handleApiData() Unable add NS record to the zone: %s error = %s\n", err, dnsName)
+		if n.Zones.Z[dnsName].Apex.NS == nil {
+			// Handle Add zone NS record
+			for v := range n.NS {
+				if err := n.Zones.Z[dnsName].Insert(handleCreateNewRR(dnsName, createRRString("NS", v, ""))); err != nil {
+					log.Errorf("handleApiData() Unable add NS record to the zone: %s error = %s\n", err, dnsName)
+				}
 			}
 		}
 
@@ -295,10 +298,31 @@ func (n *Nautobotor) handleData(ip *nautobot.IPaddress) error {
 			log.Errorf("handleData() Unable add record to the zone: %s error = %s\n", err, dnsName)
 		}
 
-		// 	// Handle PTR zones
-		// 	n.RM.AddPTRZone(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name, n.NS)
+		// Handle Add PTR zone
+		ptrZone := parsePTRzone(ip.Data.Family.Label, ip.Data.Address)
 
-	// 	n.RM.AddRecord(ip.Data.Family.Value, ip.Data.Address, ip.Data.Dns_name)
+		// Handle PTR zone
+		if err := n.Zones.AddZone(ptrZone, dnsName); err != nil {
+			log.Errorf("handleApiData() Error creating zone: %s, err=%s\n", ptrZone, err)
+		}
+
+		if n.Zones.Z[ptrZone].Apex.NS == nil {
+			// Handle Add zone NS record
+			for k, v := range n.NS {
+				if err := n.Zones.Z[ptrZone].Insert(handleCreateNewRR(ptrZone, createRRString("PTRNS", k+"."+dnsName, ""))); err != nil {
+					log.Errorf("handleApiData() Unable add NS record to the zone: %s error = %s\n", err, dnsName)
+				}
+				// ip in ptr fqdn
+				if err := n.Zones.Z[ptrZone].Insert(handleCreateNewRR(ip.Data.Dns_name, createRRString("PTR", k+"."+dnsName, v))); err != nil {
+					log.Errorf("handleApiData() Unable add NS record to the zone: %s error = %s\n", err, dnsName)
+				}
+			}
+		}
+
+		// Add record to the zone
+		if err := n.Zones.Z[ptrZone].Insert(handleCreateNewRR(ip.Data.Dns_name, createRRString("PTR", ip.Data.Dns_name+".", ip.Data.Address))); err != nil {
+			log.Errorf("handleApiData() Unable add NS record to the zone: %s error = %s\n", err, dnsName)
+		}
 
 	// case "deleted":
 	// 	log.Debug("Received webhook to delet")
