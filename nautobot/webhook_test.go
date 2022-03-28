@@ -26,7 +26,7 @@ func TestNewIPaddress(t *testing.T) {
 	ip_add.Data.Family.Label = "IPv4"
 	ip_add.Data.Address = "192.168.1.1/24"
 	ip_add.Data.Status.Value = "active"
-	ip_add.Data.Dns_name = "test.if.lastmile.sk."
+	ip_add.Data.Dns_name = "test.tets.org."
 
 	// Marshal Testing data,
 	// Test Unmarshal NewIPaddress function

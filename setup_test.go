@@ -11,7 +11,7 @@ import (
 )
 
 func Test_newNautobotor(t *testing.T) {
-	input := "nautobotor {\nwebaddress :9002\nnautoboturl  http://geriatrix.if.lastmile.sk/api/ipam/ip-addresses \ntoken d4c7513f5ab6a3d42a11ed579bd7cc16acdd4b05\n}\n"
+	input := "nautobotor {\nwebaddress :9002\nnautoboturl  http://geriatrix.test.org./api/ipam/ip-addresses \ntoken d4c7513f5ab6a3d42a11ed579bd7cc16acdd4b05\n}\n"
 
 	c := caddy.NewTestController("dns", input)
 
@@ -82,8 +82,6 @@ func Test_newNautobotor(t *testing.T) {
 		{"A", "bar.example.org.", "173.16.5.22"},
 
 		{"PTRNS", "5.16.172.in-addr.arpa.", ""},
-		{"PTR", "ans-m1.if.lastmile.sk.", "172.16.5.90"},
-		{"PTR", "skbasixhv3.if.lastmile.sk.", "172.16.5.11"},
 
 		{"NS", "example.org.", ""},
 		{"NS", "test.org.", ""},
@@ -121,7 +119,7 @@ func Test_newNautobotor(t *testing.T) {
 // 	}{
 // 		{
 // 			name:  "Creating Record via webhook",
-// 			input: "nautobotor {\nwebaddress :9002\nnautoboturl  http://geriatrix.if.lastmile.sk/api/ipam/ip-addresses \ntoken d4c7513f5ab6a3d42a11ed579bd7cc16acdd4b05\n}\n",
+// 			input: "nautobotor {\nwebaddress :9002\nnautoboturl  http://geriatrix.test.org./api/ipam/ip-addresses \ntoken d4c7513f5ab6a3d42a11ed579bd7cc16acdd4b05\n}\n",
 // 			want: Nautobotor{
 // 				WebAddress: ":9002",
 // 			},
@@ -239,10 +237,10 @@ func Test_newNautobotor(t *testing.T) {
 // 		// "pf.test.pf.":            "10.0.0.3",
 
 // 		// Uncomment IF update is skipped
-// 		// "arn-t1.if.lastmile.sk.": "10.5.1.4",
+// 		// "arn-t1.test.org..": "10.5.1.4",
 
 // 		// Uncomment IF delete is skipped
-// 		//"sk-f1.if.lastmile.sk.": "10.5.1.4",
+// 		//"sk-f1.test.org..": "10.5.1.4",
 // 	}
 
 // 	for question, i := range ip {
@@ -250,8 +248,8 @@ func Test_newNautobotor(t *testing.T) {
 // 		testDNSQuestion(t, n, "PTR", question, i)
 // 	}
 
-// 	testDNSQuestion(t, n, "SOA", "if.lastmile.sk.", "ns.if.lastmile.sk.")
-// 	testDNSQuestion(t, n, "NS", "if.lastmile.sk.", "")
+// 	testDNSQuestion(t, n, "SOA", "test.org..", "ns.test.org..")
+// 	testDNSQuestion(t, n, "NS", "test.org..", "")
 // 	testDNSQuestion(t, n, "PTRNS", "5.16.172.in-addr.arpa.", "")
 
 // 	return true
