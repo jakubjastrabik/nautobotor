@@ -143,3 +143,47 @@ func Test_createRRString(t *testing.T) {
 		})
 	}
 }
+
+func Test_parsePTRzone(t *testing.T) {
+	type args struct {
+		ipFamily string
+		ip       string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "pars IPv4 PTR zone",
+			args: args{
+				ipFamily: "IPv4",
+				ip:       "127.10.15.1/24",
+			},
+			want: "15.10.127.in-addr.arpa.",
+		},
+		{
+			name: "pars IPv6 PTR zone",
+			args: args{
+				ipFamily: "IPv6",
+				ip:       "2a00:1450:4014:80e::200e/32",
+			},
+			want: "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.5.4.1.0.0.a.2.ip6.arpa.",
+		},
+		{
+			name: "pars IPv6 PTR zone",
+			args: args{
+				ipFamily: "IPv6",
+				ip:       "2001:db8::/48",
+			},
+			want: "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa.",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parsePTRzone(tt.args.ipFamily, tt.args.ip); got != tt.want {
+				t.Errorf("parsePTRzone() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

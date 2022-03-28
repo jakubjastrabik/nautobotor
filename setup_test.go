@@ -67,13 +67,17 @@ func Test_newNautobotor(t *testing.T) {
 		{"A", "bat.test.org.", "173.16.10.24"},
 		{"A", "bat.test.org.", "173.16.10.24"},
 		{"A", "bat.example.org.", "173.16.5.24"},
+		{"PTRNS", "5.16.172.in-addr.arpa.", ""},
+		{"PTR", "ans-m1.if.lastmile.sk.", "172.16.5.90"},
+		{"PTR", "skbasixhv3.if.lastmile.sk.", "172.16.5.11"},
+
 		{"NS", "example.org.", ""},
 		{"NS", "test.org.", ""},
 	}
 
 	for i := range tests {
 		// Add zone from test
-		got.Zones.AddZone(tests[i].zoneName)
+		got.Zones.AddZone(tests[i].zoneName, "")
 		for _, r := range tests[i].rr {
 			got.Zones.Z[tests[i].zoneName].Insert(r)
 		}
@@ -273,6 +277,7 @@ func testDNSQuestion(t *testing.T, n Nautobotor, recordType, question, ip string
 		return false
 	}
 	if rec.Msg.Answer == nil {
+		t.Error(rec.Msg)
 		t.Errorf("No %s response from dns query", recordType)
 		return false
 	}

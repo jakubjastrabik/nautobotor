@@ -107,6 +107,8 @@ func (z *Zone) Insert(r dns.RR) error {
 				return nil
 			}
 		}
+	case dns.TypePTR:
+		r.(*dns.PTR).Ptr = strings.ToLower(r.(*dns.PTR).Ptr)
 	case dns.TypeCNAME:
 		r.(*dns.CNAME).Target = strings.ToLower(r.(*dns.CNAME).Target)
 	case dns.TypeMX:

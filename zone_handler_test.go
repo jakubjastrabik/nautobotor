@@ -41,7 +41,7 @@ func TestZones_AddZone(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			if err := z.AddZone(tt.args.name); err != nil {
+			if err := z.AddZone(tt.args.name, ""); err != nil {
 				t.Errorf("Zones.AddZone() error = %v", err)
 			}
 			for _, name := range tt.fields.Names {
